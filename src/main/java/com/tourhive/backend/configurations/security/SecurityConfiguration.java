@@ -55,6 +55,11 @@ public class SecurityConfiguration {
                         .requestMatchers(PUBLIC_WHITE_LIST).permitAll()
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/me", "/api/v1/users/me/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/*").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/me", "/api/v1/organizers/me/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/*").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("MODERATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

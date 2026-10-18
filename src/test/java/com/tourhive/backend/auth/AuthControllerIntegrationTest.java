@@ -45,8 +45,16 @@ class AuthControllerIntegrationTest {
     @Autowired
     private EmailVerificationRepository emailVerificationRepository;
 
+    @Autowired
+    private com.tourhive.backend.support.DatabaseCleanup databaseCleanup;
+
     @MockBean
     private EmailService emailService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        databaseCleanup.clean();
+    }
 
     @Test
     @DisplayName("Complete authentication lifecycle: register -> verify -> login -> me -> refresh -> reuse detection -> logout")
