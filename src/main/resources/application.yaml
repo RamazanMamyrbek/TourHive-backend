@@ -19,6 +19,20 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+jwt:
+  secret: ${JWT_SECRET:tourhive-super-secure-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256}
+  access-token-expiration-seconds: 900
+  refresh-token-expiration-seconds: 2592000
 
 springdoc:
   api-docs:

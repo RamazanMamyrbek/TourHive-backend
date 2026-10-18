@@ -10,6 +10,14 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false
+  mail:
+    host: localhost
+    port: 1025
+
+jwt:
+  secret: test-secret-key-must-be-at-least-256-bits-long-for-hmac-sha256-testing
+  access-token-expiration-seconds: 900
+  refresh-token-expiration-seconds: 2592000
 
 logging:
   level:

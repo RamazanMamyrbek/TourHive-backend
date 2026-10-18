@@ -17,14 +17,19 @@ class FlywayMigrationIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("Flyway schema history table should contain successful V1 migration")
+    @DisplayName("Flyway schema history table should contain successful V1 and V2 migrations")
     void flywayMigrationShouldApplySuccessfully() {
-        Integer migrationCount = jdbcTemplate.queryForObject(
+        Integer v1Count = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE version = '1' AND success = true",
                 Integer.class
         );
+        Integer v2Count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM flyway_schema_history WHERE version = '2' AND success = true",
+                Integer.class
+        );
 
-        assertThat(migrationCount).isNotNull().isEqualTo(1);
+        assertThat(v1Count).isNotNull().isEqualTo(1);
+        assertThat(v2Count).isNotNull().isEqualTo(1);
     }
 
     @Test
