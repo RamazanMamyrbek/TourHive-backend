@@ -19,10 +19,12 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@NoArgsConstructor
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
+
+    protected BaseEntity() {
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

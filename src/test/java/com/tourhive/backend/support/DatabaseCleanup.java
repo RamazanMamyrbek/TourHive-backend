@@ -20,6 +20,7 @@ public class DatabaseCleanup {
     private final BusinessProfileRepository businessProfileRepository;
     private final OrganizerProfileRepository organizerProfileRepository;
     private final UserProfileRepository userProfileRepository;
+    private final com.tourhive.backend.repositories.resources.ResourceRepository resourceRepository;
     private final UserBlockRepository userBlockRepository;
     private final EmailVerificationRepository emailVerificationRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -31,6 +32,7 @@ public class DatabaseCleanup {
         businessProfileRepository.deleteAll();
         organizerProfileRepository.deleteAll();
         userProfileRepository.deleteAll();
+        resourceRepository.deleteAll();
         userBlockRepository.deleteAll();
         emailVerificationRepository.deleteAll();
         refreshTokenRepository.deleteAll();

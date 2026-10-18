@@ -20,6 +20,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -51,8 +53,11 @@ class UserControllerTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @Autowired
+    private com.tourhive.backend.repositories.resources.ResourceRepository resourceRepository;
+
     @org.springframework.boot.test.mock.mockito.MockBean
-    private com.tourhive.backend.services.storage.FileStorageService fileStorageService;
+    private com.tourhive.backend.services.resources.ResourceService resourceService;
 
     private User testUser;
     private String token;
@@ -140,15 +145,25 @@ class UserControllerTest {
                 "binary image data".getBytes()
         );
 
-        org.mockito.Mockito.when(fileStorageService.uploadFile(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("avatars")))
-                .thenReturn("http://localhost:9000/tourhive-media/avatars/john-photo.jpg");
+        com.tourhive.backend.entities.resources.Resource mockResource = resourceRepository.save(new com.tourhive.backend.entities.resources.Resource(
+                "john-photo.jpg",
+                "avatars/" + UUID.randomUUID() + ".jpg",
+                "avatars",
+                100L,
+                com.tourhive.backend.entities.resources.ResourceType.IMAGE,
+                "image/jpeg"
+        ));
+        UUID resourceId = mockResource.getId();
+
+        org.mockito.Mockito.when(resourceService.saveResource(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("avatars")))
+                .thenReturn(mockResource);
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/users/me/avatar")
                         .file(file)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.avatarUrl").value("http://localhost:9000/tourhive-media/avatars/john-photo.jpg"));
+                .andExpect(jsonPath("$.data.avatarUrl").value("/api/v1/resources/" + resourceId));
     }
 
     @Test

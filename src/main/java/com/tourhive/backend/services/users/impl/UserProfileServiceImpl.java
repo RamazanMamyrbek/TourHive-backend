@@ -30,7 +30,7 @@ public class UserProfileServiceImpl implements UserProfileService {
     private final UserBlockRepository userBlockRepository;
     private final UserService userService;
     private final UserProfileMapper userProfileMapper;
-    private final com.tourhive.backend.services.storage.FileStorageService fileStorageService;
+    private final com.tourhive.backend.services.resources.ResourceService resourceService;
 
     @Override
     @Transactional
@@ -72,6 +72,11 @@ public class UserProfileServiceImpl implements UserProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseGet(() -> UserProfile.builder().user(user).build());
 
+        if (profile.getAvatarResource() != null && (dto.avatarUrl() == null || !dto.avatarUrl().contains(profile.getAvatarResource().getId().toString()))) {
+            resourceService.deleteResource(profile.getAvatarResource().getId());
+            profile.setAvatarResource(null);
+        }
+
         profile.setAvatarUrl(dto.avatarUrl());
         UserProfile saved = userProfileRepository.save(profile);
         return userProfileMapper.toResponseDto(saved, user);
@@ -80,24 +85,19 @@ public class UserProfileServiceImpl implements UserProfileService {
     @Override
     @Transactional
     public UserProfileResponseDto uploadAvatar(UUID userId, org.springframework.web.multipart.MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new com.tourhive.backend.exceptions.InvalidFileException("Cannot upload an empty avatar file");
-        }
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new com.tourhive.backend.exceptions.InvalidFileException("Avatar must be an image file (JPEG, PNG, WebP)");
-        }
+        resourceService.checkImage(file);
 
         User user = userService.getById(userId);
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseGet(() -> UserProfile.builder().user(user).build());
 
-        if (StringUtils.hasText(profile.getAvatarUrl())) {
-            fileStorageService.deleteFile(profile.getAvatarUrl());
+        if (profile.getAvatarResource() != null) {
+            resourceService.deleteResource(profile.getAvatarResource().getId());
         }
 
-        String avatarUrl = fileStorageService.uploadFile(file, "avatars");
-        profile.setAvatarUrl(avatarUrl);
+        com.tourhive.backend.entities.resources.Resource newResource = resourceService.saveResource(file, "avatars");
+        profile.setAvatarResource(newResource);
+        profile.setAvatarUrl("/api/v1/resources/" + newResource.getId());
         UserProfile saved = userProfileRepository.save(profile);
         return userProfileMapper.toResponseDto(saved, user);
     }

@@ -1,23 +1,19 @@
 package com.tourhive.backend.entities.users;
 
 import com.tourhive.backend.entities.BaseEntity;
+import com.tourhive.backend.entities.resources.Resource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "user_profiles")
 public class UserProfile extends BaseEntity {
@@ -34,6 +30,10 @@ public class UserProfile extends BaseEntity {
 
     @Column(name = "nickname", length = 50, unique = true)
     private String nickname;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "avatar_resource_id")
+    private Resource avatarResource;
 
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
@@ -52,4 +52,34 @@ public class UserProfile extends BaseEntity {
 
     @Column(name = "phone", length = 50)
     private String phone;
+
+    public UserProfile() {
+    }
+
+    @Builder
+    public UserProfile(
+            User user,
+            String firstName,
+            String lastName,
+            String nickname,
+            Resource avatarResource,
+            String avatarUrl,
+            String bio,
+            String country,
+            String city,
+            String languages,
+            String phone
+    ) {
+        this.user = user;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.nickname = nickname;
+        this.avatarResource = avatarResource;
+        this.avatarUrl = avatarUrl;
+        this.bio = bio;
+        this.country = country;
+        this.city = city;
+        this.languages = languages;
+        this.phone = phone;
+    }
 }
