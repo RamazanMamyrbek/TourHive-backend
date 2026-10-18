@@ -51,6 +51,9 @@ class UserControllerTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.tourhive.backend.services.storage.FileStorageService fileStorageService;
+
     private User testUser;
     private String token;
 
@@ -114,7 +117,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/users/me/avatar should update avatar URL")
+    @DisplayName("POST /api/v1/users/me/avatar (json) should update avatar URL")
     void shouldUpdateAvatar() throws Exception {
         UpdateAvatarRequestDto request = new UpdateAvatarRequestDto("https://minio.local/tourhive-avatars/john.jpg");
 
@@ -125,6 +128,27 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.avatarUrl").value("https://minio.local/tourhive-avatars/john.jpg"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/users/me/avatar (multipart) should upload image and update avatar URL")
+    void shouldUploadAvatarMultipart() throws Exception {
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file",
+                "john-photo.jpg",
+                "image/jpeg",
+                "binary image data".getBytes()
+        );
+
+        org.mockito.Mockito.when(fileStorageService.uploadFile(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("avatars")))
+                .thenReturn("http://localhost:9000/tourhive-media/avatars/john-photo.jpg");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/users/me/avatar")
+                        .file(file)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.avatarUrl").value("http://localhost:9000/tourhive-media/avatars/john-photo.jpg"));
     }
 
     @Test

@@ -105,6 +105,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    @ExceptionHandler(org.springframework.data.mapping.PropertyReferenceException.class)
+    public ResponseEntity<ApiErrorResponseDto> handlePropertyReferenceException(org.springframework.data.mapping.PropertyReferenceException ex, HttpServletRequest request) {
+        log.warn("Invalid sort property on {}: {}", request.getRequestURI(), ex.getMessage());
+        ApiErrorResponseDto error = ApiErrorResponseDto.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "INVALID_SORT_PROPERTY",
+                "Invalid sort property: " + ex.getPropertyName(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponseDto> handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        log.warn("Max upload size exceeded on {}: {}", request.getRequestURI(), ex.getMessage());
+        ApiErrorResponseDto error = ApiErrorResponseDto.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "FILE_SIZE_EXCEEDED",
+                "Uploaded file exceeds maximum allowed size",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponseDto> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled server error processing request to {}", request.getRequestURI(), ex);

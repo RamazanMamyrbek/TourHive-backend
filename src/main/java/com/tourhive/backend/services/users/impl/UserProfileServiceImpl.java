@@ -30,6 +30,7 @@ public class UserProfileServiceImpl implements UserProfileService {
     private final UserBlockRepository userBlockRepository;
     private final UserService userService;
     private final UserProfileMapper userProfileMapper;
+    private final com.tourhive.backend.services.storage.FileStorageService fileStorageService;
 
     @Override
     @Transactional
@@ -72,6 +73,31 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .orElseGet(() -> UserProfile.builder().user(user).build());
 
         profile.setAvatarUrl(dto.avatarUrl());
+        UserProfile saved = userProfileRepository.save(profile);
+        return userProfileMapper.toResponseDto(saved, user);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponseDto uploadAvatar(UUID userId, org.springframework.web.multipart.MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new com.tourhive.backend.exceptions.InvalidFileException("Cannot upload an empty avatar file");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new com.tourhive.backend.exceptions.InvalidFileException("Avatar must be an image file (JPEG, PNG, WebP)");
+        }
+
+        User user = userService.getById(userId);
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseGet(() -> UserProfile.builder().user(user).build());
+
+        if (StringUtils.hasText(profile.getAvatarUrl())) {
+            fileStorageService.deleteFile(profile.getAvatarUrl());
+        }
+
+        String avatarUrl = fileStorageService.uploadFile(file, "avatars");
+        profile.setAvatarUrl(avatarUrl);
         UserProfile saved = userProfileRepository.save(profile);
         return userProfileMapper.toResponseDto(saved, user);
     }

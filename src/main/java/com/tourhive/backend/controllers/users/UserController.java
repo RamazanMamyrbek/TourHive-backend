@@ -49,8 +49,18 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.success("Profile updated successfully", updated));
     }
 
-    @Operation(summary = "Update current user avatar", description = "Sets or updates the avatar image URL", security = @SecurityRequirement(name = "bearerAuth"))
-    @PostMapping("/me/avatar")
+    @Operation(summary = "Upload current user avatar (multipart)", description = "Uploads avatar image file directly to MinIO and updates user profile", security = @SecurityRequirement(name = "bearerAuth"))
+    @PostMapping(value = "/me/avatar", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseDto<UserProfileResponseDto>> uploadAvatar(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @org.springframework.web.bind.annotation.RequestPart("file") org.springframework.web.multipart.MultipartFile file
+    ) {
+        UserProfileResponseDto updated = userProfileService.uploadAvatar(principal.getId(), file);
+        return ResponseEntity.ok(ApiResponseDto.success("Avatar uploaded successfully", updated));
+    }
+
+    @Operation(summary = "Update current user avatar URL (json)", description = "Sets or updates the avatar image URL directly", security = @SecurityRequirement(name = "bearerAuth"))
+    @PostMapping(value = "/me/avatar", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponseDto<UserProfileResponseDto>> updateAvatar(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateAvatarRequestDto request

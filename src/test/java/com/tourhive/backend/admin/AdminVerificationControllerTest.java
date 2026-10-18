@@ -138,6 +138,15 @@ class AdminVerificationControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/v1/admin/business-verifications with invalid sort property should return 400 Bad Request")
+    void shouldReturnBadRequestForInvalidSortProperty() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/business-verifications?sort=nonExistentProperty")
+                        .header("Authorization", "Bearer " + moderatorToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_SORT_PROPERTY"));
+    }
+
+    @Test
     @DisplayName("GET /api/v1/admin/business-verifications/{id} should return full details with documents")
     void shouldReturnVerificationDetails() throws Exception {
         mockMvc.perform(get("/api/v1/admin/business-verifications/" + pendingProfile.getId())

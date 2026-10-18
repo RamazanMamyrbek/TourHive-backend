@@ -15,5 +15,7 @@ public interface UserProfileService {
 
     UserProfileResponseDto updateAvatar(UUID userId, UpdateAvatarRequestDto dto);
 
+    UserProfileResponseDto uploadAvatar(UUID userId, org.springframework.web.multipart.MultipartFile file);
+
     PublicUserProfileResponseDto getPublicProfile(UUID requestingUserId, UUID targetUserId);
 }

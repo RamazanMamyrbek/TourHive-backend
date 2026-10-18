@@ -37,7 +37,8 @@ public class AdminVerificationController {
     @Operation(summary = "List pending business verifications", description = "Returns a paginated list of applications awaiting review", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping
     public ResponseEntity<ApiResponseDto<Page<BusinessProfileAdminResponseDto>>> getPendingVerifications(
-            @PageableDefault(size = 20) Pageable pageable
+            @org.springdoc.core.annotations.ParameterObject
+            @PageableDefault(size = 20, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable
     ) {
         Page<BusinessProfileAdminResponseDto> page = adminVerificationService.getPendingVerifications(pageable);
         return ResponseEntity.ok(ApiResponseDto.success(page));
