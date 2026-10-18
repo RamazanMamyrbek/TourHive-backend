@@ -11,10 +11,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Slf4j
 @Configuration
-@RequiredArgsConstructor
 public class MinioConfiguration {
 
     private final MinioProperties minioProperties;
+
+    public MinioConfiguration(MinioProperties minioProperties) {
+        this.minioProperties = minioProperties;
+    }
 
     @Bean
     public MinioClient minioClient() {

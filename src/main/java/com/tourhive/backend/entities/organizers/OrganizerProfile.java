@@ -18,9 +18,6 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "organizer_profiles")
 public class OrganizerProfile extends BaseEntity {
@@ -33,14 +30,23 @@ public class OrganizerProfile extends BaseEntity {
     private String bio;
 
     @Column(name = "experience_years", nullable = false)
-    @Builder.Default
     private int experienceYears = 0;
 
     @Column(name = "rating", nullable = false, precision = 3, scale = 2)
-    @Builder.Default
     private BigDecimal rating = BigDecimal.ZERO;
 
     @Column(name = "reviews_count", nullable = false)
-    @Builder.Default
     private int reviewsCount = 0;
+
+    public OrganizerProfile() {
+    }
+
+    @Builder
+    public OrganizerProfile(User user, String bio, int experienceYears, BigDecimal rating, int reviewsCount) {
+        this.user = user;
+        this.bio = bio;
+        this.experienceYears = experienceYears;
+        this.rating = rating != null ? rating : BigDecimal.ZERO;
+        this.reviewsCount = reviewsCount;
+    }
 }

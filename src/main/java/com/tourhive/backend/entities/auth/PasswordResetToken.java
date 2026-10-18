@@ -18,9 +18,6 @@ import java.time.Instant;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "password_resets")
 public class PasswordResetToken extends BaseEntity {
@@ -37,6 +34,17 @@ public class PasswordResetToken extends BaseEntity {
 
     @Column(name = "used_at")
     private Instant usedAt;
+
+    public PasswordResetToken() {
+    }
+
+    @Builder
+    public PasswordResetToken(User user, String token, Instant expiresAt, Instant usedAt) {
+        this.user = user;
+        this.token = token;
+        this.expiresAt = expiresAt;
+        this.usedAt = usedAt;
+    }
 
     public boolean isExpired() {
         return Instant.now().isAfter(expiresAt);

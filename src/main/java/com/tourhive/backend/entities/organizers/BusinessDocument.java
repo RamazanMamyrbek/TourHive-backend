@@ -15,9 +15,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "business_documents")
 public class BusinessDocument extends BaseEntity {
@@ -31,4 +28,14 @@ public class BusinessDocument extends BaseEntity {
 
     @Column(name = "document_url", nullable = false, length = 500)
     private String documentUrl;
+
+    public BusinessDocument() {
+    }
+
+    @Builder
+    public BusinessDocument(BusinessProfile businessProfile, String documentName, String documentUrl) {
+        this.businessProfile = businessProfile;
+        this.documentName = documentName;
+        this.documentUrl = documentUrl;
+    }
 }

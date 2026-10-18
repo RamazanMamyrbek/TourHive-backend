@@ -15,9 +15,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(
         name = "user_blocks",
@@ -32,4 +29,13 @@ public class UserBlock extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "blocked_id", nullable = false)
     private User blocked;
+
+    public UserBlock() {
+    }
+
+    @Builder
+    public UserBlock(User blocker, User blocked) {
+        this.blocker = blocker;
+        this.blocked = blocked;
+    }
 }

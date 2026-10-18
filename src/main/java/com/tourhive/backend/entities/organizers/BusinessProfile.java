@@ -25,9 +25,6 @@ import java.util.List;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "business_profiles")
 public class BusinessProfile extends BaseEntity {
@@ -56,7 +53,6 @@ public class BusinessProfile extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
-    @Builder.Default
     private BusinessVerificationStatus status = BusinessVerificationStatus.PENDING;
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
@@ -70,8 +66,39 @@ public class BusinessProfile extends BaseEntity {
     private Instant reviewedAt;
 
     @OneToMany(mappedBy = "businessProfile", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<BusinessDocument> documents = new ArrayList<>();
+
+    public BusinessProfile() {
+    }
+
+    @Builder
+    public BusinessProfile(
+            User user,
+            String legalName,
+            String registrationNumber,
+            String country,
+            String contactEmail,
+            String contactPhone,
+            String description,
+            BusinessVerificationStatus status,
+            String rejectionReason,
+            User reviewedBy,
+            Instant reviewedAt,
+            List<BusinessDocument> documents
+    ) {
+        this.user = user;
+        this.legalName = legalName;
+        this.registrationNumber = registrationNumber;
+        this.country = country;
+        this.contactEmail = contactEmail;
+        this.contactPhone = contactPhone;
+        this.description = description;
+        this.status = status != null ? status : BusinessVerificationStatus.PENDING;
+        this.rejectionReason = rejectionReason;
+        this.reviewedBy = reviewedBy;
+        this.reviewedAt = reviewedAt;
+        this.documents = documents != null ? documents : new ArrayList<>();
+    }
 
     public void addDocument(BusinessDocument document) {
         documents.add(document);

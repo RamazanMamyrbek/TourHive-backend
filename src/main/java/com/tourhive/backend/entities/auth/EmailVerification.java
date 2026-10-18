@@ -18,9 +18,6 @@ import java.time.Instant;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "email_verifications")
 public class EmailVerification extends BaseEntity {
@@ -37,6 +34,17 @@ public class EmailVerification extends BaseEntity {
 
     @Column(name = "used_at")
     private Instant usedAt;
+
+    public EmailVerification() {
+    }
+
+    @Builder
+    public EmailVerification(User user, String code, Instant expiresAt, Instant usedAt) {
+        this.user = user;
+        this.code = code;
+        this.expiresAt = expiresAt;
+        this.usedAt = usedAt;
+    }
 
     public boolean isExpired() {
         return Instant.now().isAfter(expiresAt);

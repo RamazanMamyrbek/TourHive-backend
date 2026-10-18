@@ -18,9 +18,6 @@ import java.time.Instant;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Entity
 @Table(name = "refresh_tokens")
 public class RefreshToken extends BaseEntity {
@@ -36,11 +33,22 @@ public class RefreshToken extends BaseEntity {
     private Instant expiresAt;
 
     @Column(name = "revoked", nullable = false)
-    @Builder.Default
     private boolean revoked = false;
 
     @Column(name = "replaced_by_token")
     private String replacedByToken;
+
+    public RefreshToken() {
+    }
+
+    @Builder
+    public RefreshToken(User user, String tokenHash, Instant expiresAt, boolean revoked, String replacedByToken) {
+        this.user = user;
+        this.tokenHash = tokenHash;
+        this.expiresAt = expiresAt;
+        this.revoked = revoked;
+        this.replacedByToken = replacedByToken;
+    }
 
     public boolean isExpired() {
         return Instant.now().isAfter(expiresAt);
