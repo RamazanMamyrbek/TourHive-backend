@@ -17,34 +17,16 @@ class FlywayMigrationIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("Flyway schema history table should contain successful V1, V2, V3, and V4 migrations")
+    @DisplayName("Flyway schema history table should contain successful V1 through V11 migrations")
     void flywayMigrationShouldApplySuccessfully() {
-        Integer v1Count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM flyway_schema_history WHERE version = '1' AND success = true",
-                Integer.class
-        );
-        Integer v2Count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM flyway_schema_history WHERE version = '2' AND success = true",
-                Integer.class
-        );
-        Integer v3Count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM flyway_schema_history WHERE version = '3' AND success = true",
-                Integer.class
-        );
-        Integer v4Count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM flyway_schema_history WHERE version = '4' AND success = true",
-                Integer.class
-        );
-        Integer v5Count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM flyway_schema_history WHERE version = '5' AND success = true",
-                Integer.class
-        );
-
-        assertThat(v1Count).isNotNull().isEqualTo(1);
-        assertThat(v2Count).isNotNull().isEqualTo(1);
-        assertThat(v3Count).isNotNull().isEqualTo(1);
-        assertThat(v4Count).isNotNull().isEqualTo(1);
-        assertThat(v5Count).isNotNull().isEqualTo(1);
+        for (int v = 1; v <= 11; v++) {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT count(*) FROM flyway_schema_history WHERE version = ? AND success = true",
+                    Integer.class,
+                    String.valueOf(v)
+            );
+            assertThat(count).as("Migration V" + v + " count").isEqualTo(1);
+        }
     }
 
     @Test

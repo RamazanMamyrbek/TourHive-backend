@@ -93,6 +93,8 @@ public interface TourMapper {
                 toImageDtoList(tour.getImages()),
                 resolveCoverImageUrl(tour),
                 tour.getRejectionReason(),
+                tour.getCancellationReason(),
+                tour.getPublishedAt(),
                 tour.getCreatedAt(),
                 tour.getUpdatedAt()
         );

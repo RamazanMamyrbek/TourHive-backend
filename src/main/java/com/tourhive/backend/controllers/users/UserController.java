@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
+
 @Tag(name = "Users", description = "Endpoints for user profiles and public user information")
 @RestController
 @RequestMapping("/api/v1/users")
@@ -31,12 +33,20 @@ import java.util.UUID;
 public class UserController {
 
     private final UserProfileService userProfileService;
+    private final com.tourhive.backend.services.users.UserService userService;
 
     @Operation(summary = "Get current user profile", description = "Returns full profile of the authenticated user", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/me")
     public ResponseEntity<ApiResponseDto<UserProfileResponseDto>> getMyProfile(@AuthenticationPrincipal UserPrincipal principal) {
         UserProfileResponseDto profile = userProfileService.getMyProfile(principal.getId());
         return ResponseEntity.ok(ApiResponseDto.success(profile));
+    }
+
+    @Operation(summary = "Delete current user account", description = "Permanently deactivates and anonymizes account data", security = @SecurityRequirement(name = "bearerAuth"))
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponseDto<Void>> deleteMyAccount(@AuthenticationPrincipal UserPrincipal principal) {
+        userService.deleteAccount(principal.getId());
+        return ResponseEntity.ok(ApiResponseDto.success("Account deleted successfully", null));
     }
 
     @Operation(summary = "Update current user profile", description = "Updates editable personal details of the current user", security = @SecurityRequirement(name = "bearerAuth"))

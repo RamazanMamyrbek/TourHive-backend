@@ -69,6 +69,19 @@ public class Tour extends BaseEntity {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by_id")
+    private User reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private java.time.Instant reviewedAt;
+
+    @Column(name = "published_at")
+    private java.time.Instant publishedAt;
+
     @ElementCollection
     @CollectionTable(name = "tour_countries", joinColumns = @JoinColumn(name = "tour_id"))
     @Column(name = "country", nullable = false, length = 100)
@@ -160,5 +173,18 @@ public class Tour extends BaseEntity {
     public void removeImage(TourImage image) {
         images.remove(image);
         image.setTour(null);
+    }
+
+    public String getCoverImageUrl() {
+        if (images == null || images.isEmpty()) {
+            return null;
+        }
+        return images.stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsCover()))
+                .findFirst()
+                .or(() -> images.stream().findFirst())
+                .filter(img -> img.getResource() != null)
+                .map(img -> "/api/v1/resources/" + img.getResource().getId())
+                .orElse(null);
     }
 }

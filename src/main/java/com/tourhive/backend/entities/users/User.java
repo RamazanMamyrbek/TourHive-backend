@@ -38,6 +38,9 @@ public class User extends BaseEntity {
     @Column(name = "is_business_verified", nullable = false)
     private boolean isBusinessVerified = false;
 
+    @Column(name = "block_reason", length = 500)
+    private String blockReason;
+
     public User() {
     }
 

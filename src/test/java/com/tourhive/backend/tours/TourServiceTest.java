@@ -69,6 +69,18 @@ class TourServiceTest {
     @Mock
     private ResourceRepository resourceRepository;
 
+    @Mock
+    private com.tourhive.backend.repositories.tours.TourApplicationRepository tourApplicationRepository;
+
+    @Mock
+    private com.tourhive.backend.repositories.tours.ApplicationStatusHistoryRepository applicationStatusHistoryRepository;
+
+    @Mock
+    private com.tourhive.backend.services.chats.ChatService chatService;
+
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @Spy
     private TourMapper tourMapper = Mappers.getMapper(TourMapper.class);
 
@@ -302,5 +314,117 @@ class TourServiceTest {
         assertThat(imageDto.resourceId()).isEqualTo(resourceId);
         assertThat(imageDto.url()).isEqualTo("/api/v1/resources/" + resourceId);
         assertThat(imageDto.isCover()).isTrue();
+    }
+
+    @Test
+    @DisplayName("should submit draft tour for publication review")
+    void shouldPublishTourSuccessfully() {
+        Tour tour = Tour.builder()
+                .organizer(organizerUser)
+                .title("Kolsay Trek")
+                .description("Scenic tour")
+                .status(TourStatus.DRAFT)
+                .tourType(TourType.COMMUNITY)
+                .startDate(LocalDate.now().plusDays(5))
+                .endDate(LocalDate.now().plusDays(8))
+                .capacity(10)
+                .countries(List.of("Kazakhstan"))
+                .cities(List.of("Almaty"))
+                .images(new ArrayList<>())
+                .build();
+        tour.setId(UUID.randomUUID());
+        TourImage image = TourImage.builder().tour(tour).isCover(true).orderIndex(0).build();
+        tour.addImage(image);
+
+        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.save(any(Tour.class))).thenAnswer(i -> i.getArgument(0));
+
+        TourResponseDto response = tourService.publishTour(tour.getId(), organizerUser.getId());
+
+        assertThat(response).isNotNull();
+        assertThat(response.status()).isEqualTo(TourStatus.PENDING_REVIEW);
+        assertThat(tour.getStatus()).isEqualTo(TourStatus.PENDING_REVIEW);
+    }
+
+    @Test
+    @DisplayName("should throw when publishing tour without photos")
+    void shouldThrowWhenPublishingTourWithoutImages() {
+        Tour tour = Tour.builder()
+                .organizer(organizerUser)
+                .title("Kolsay Trek")
+                .description("Scenic tour")
+                .status(TourStatus.DRAFT)
+                .tourType(TourType.COMMUNITY)
+                .startDate(LocalDate.now().plusDays(5))
+                .endDate(LocalDate.now().plusDays(8))
+                .capacity(10)
+                .countries(List.of("Kazakhstan"))
+                .cities(List.of("Almaty"))
+                .images(new ArrayList<>())
+                .build();
+        tour.setId(UUID.randomUUID());
+
+        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+
+        assertThatThrownBy(() -> tourService.publishTour(tour.getId(), organizerUser.getId()))
+                .isInstanceOf(InvalidTourDataException.class)
+                .hasMessageContaining("At least one tour photo is required");
+    }
+
+    @Test
+    @DisplayName("should cancel published tour with reason")
+    void shouldCancelTourSuccessfully() {
+        Tour tour = Tour.builder()
+                .organizer(organizerUser)
+                .title("Kolsay Trek")
+                .status(TourStatus.PUBLISHED)
+                .tourType(TourType.COMMUNITY)
+                .startDate(LocalDate.now().plusDays(5))
+                .endDate(LocalDate.now().plusDays(8))
+                .capacity(10)
+                .build();
+        tour.setId(UUID.randomUUID());
+
+        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.save(any(Tour.class))).thenAnswer(i -> i.getArgument(0));
+
+        TourResponseDto response = tourService.cancelTour(
+                tour.getId(),
+                organizerUser.getId(),
+                new com.tourhive.backend.dto.tours.request.CancelTourRequestDto("Weather warning")
+        );
+
+        assertThat(response).isNotNull();
+        assertThat(response.status()).isEqualTo(TourStatus.CANCELLED);
+        assertThat(tour.getStatus()).isEqualTo(TourStatus.CANCELLED);
+        assertThat(tour.getCancellationReason()).isEqualTo("Weather warning");
+    }
+
+    @Test
+    @DisplayName("searchPublishedTours should fail if dateFrom is after dateTo")
+    void shouldFailIfSearchDateFromAfterDateTo() {
+        com.tourhive.backend.dto.tours.request.TourSearchCriteria criteria = new com.tourhive.backend.dto.tours.request.TourSearchCriteria(
+                null, null, null, null,
+                LocalDate.now().plusDays(10), LocalDate.now().plusDays(5),
+                null, null, null
+        );
+
+        assertThatThrownBy(() -> tourService.searchPublishedTours(criteria, org.springframework.data.domain.Pageable.unpaged()))
+                .isInstanceOf(InvalidTourDataException.class)
+                .hasMessageContaining("dateFrom must be before or equal to dateTo");
+    }
+
+    @Test
+    @DisplayName("searchPublishedTours should fail if minPrice is greater than maxPrice")
+    void shouldFailIfSearchMinPriceGreaterThanMaxPrice() {
+        com.tourhive.backend.dto.tours.request.TourSearchCriteria criteria = new com.tourhive.backend.dto.tours.request.TourSearchCriteria(
+                null, null, null, null,
+                null, null,
+                BigDecimal.valueOf(50000), BigDecimal.valueOf(10000), null
+        );
+
+        assertThatThrownBy(() -> tourService.searchPublishedTours(criteria, org.springframework.data.domain.Pageable.unpaged()))
+                .isInstanceOf(InvalidTourDataException.class)
+                .hasMessageContaining("minPrice must be less than or equal to maxPrice");
     }
 }

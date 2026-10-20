@@ -1,0 +1,15 @@
+package com.tourhive.backend.entities.notifications;
+
+public enum NotificationType {
+    APPLICATION_RECEIVED,
+    APPLICATION_ACCEPTED,
+    APPLICATION_REJECTED,
+    APPLICATION_CANCELLED,
+    TOUR_CANCELLED,
+    FRIEND_REQUEST_RECEIVED,
+    FRIEND_REQUEST_ACCEPTED,
+    TOUR_REVIEWED,
+    TOUR_APPROVED,
+    TOUR_REJECTED,
+    SYSTEM
+}

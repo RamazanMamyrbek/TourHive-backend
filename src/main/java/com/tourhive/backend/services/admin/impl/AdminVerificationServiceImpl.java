@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.tourhive.backend.entities.audit.AuditAction;
+import com.tourhive.backend.services.audit.AuditService;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,7 @@ public class AdminVerificationServiceImpl implements AdminVerificationService {
     private final UserRepository userRepository;
     private final UserService userService;
     private final OrganizerMapper organizerMapper;
+    private final AuditService auditService;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,6 +75,18 @@ public class AdminVerificationServiceImpl implements AdminVerificationService {
 
         BusinessProfile saved = businessProfileRepository.save(profile);
         log.info("Admin/Moderator {} reviewed business profile {}: status={}", reviewerId, profileId, dto.status());
+
+        AuditAction auditAction = dto.status() == BusinessVerificationStatus.VERIFIED ? AuditAction.BUSINESS_VERIFIED : AuditAction.BUSINESS_REJECTED;
+        auditService.logAction(
+                reviewerId,
+                reviewer.getEmail(),
+                auditAction,
+                "ORGANIZER_VERIFICATION",
+                profile.getId(),
+                "Status: " + dto.status() + (dto.rejectionReason() != null ? ", Reason: " + dto.rejectionReason() : ""),
+                null
+        );
+
         return organizerMapper.toAdminResponseDto(saved);
     }
 }

@@ -121,6 +121,10 @@ public class AuthServiceImpl implements AuthService {
             throw new AccountBlockedException("Account is blocked. Please contact support.");
         }
 
+        if (user.getStatus() == UserStatus.DELETED) {
+            throw new com.tourhive.backend.exceptions.AccountDeletedException("This account has been deleted.");
+        }
+
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = tokenService.issueRefreshToken(user);
 

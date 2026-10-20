@@ -53,6 +53,16 @@ public class UserProfile extends BaseEntity {
     @Column(name = "phone", length = 50)
     private String phone;
 
+    public String getFullName() {
+        if (firstName == null && lastName == null) {
+            return null;
+        }
+        if (firstName != null && lastName != null) {
+            return firstName + " " + lastName;
+        }
+        return firstName != null ? firstName : lastName;
+    }
+
     public UserProfile() {
     }
 

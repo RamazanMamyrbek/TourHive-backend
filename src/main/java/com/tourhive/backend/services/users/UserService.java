@@ -17,4 +17,6 @@ public interface UserService {
     User activateUser(User user);
 
     void updatePassword(User user, String newRawPassword);
+
+    void deleteAccount(UUID userId);
 }

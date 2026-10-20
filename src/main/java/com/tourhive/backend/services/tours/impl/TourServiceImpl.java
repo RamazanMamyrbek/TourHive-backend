@@ -1,16 +1,25 @@
 package com.tourhive.backend.services.tours.impl;
 
 import com.tourhive.backend.dto.tours.request.AddTourImageRequestDto;
+import com.tourhive.backend.dto.tours.request.CancelTourRequestDto;
 import com.tourhive.backend.dto.tours.request.CreateTourRequestDto;
 import com.tourhive.backend.dto.tours.request.TourRouteItemRequestDto;
+import com.tourhive.backend.dto.tours.request.TourSearchCriteria;
 import com.tourhive.backend.dto.tours.request.UpdateTourRequestDto;
 import com.tourhive.backend.dto.tours.response.TourImageResponseDto;
 import com.tourhive.backend.dto.tours.response.TourResponseDto;
 import com.tourhive.backend.dto.tours.response.TourShortResponseDto;
+import com.tourhive.backend.spec.tours.TourSpecification;
+import com.tourhive.backend.spec.tours.builder.TourSpecificationBuilder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.tourhive.backend.entities.resources.Resource;
 import com.tourhive.backend.entities.tours.Tour;
 import com.tourhive.backend.entities.tours.TourImage;
 import com.tourhive.backend.entities.tours.TourRouteItem;
+import com.tourhive.backend.entities.tours.ApplicationStatusHistory;
+import com.tourhive.backend.entities.tours.TourApplication;
+import com.tourhive.backend.entities.tours.TourApplicationStatus;
 import com.tourhive.backend.entities.tours.TourStatus;
 import com.tourhive.backend.entities.tours.TourType;
 import com.tourhive.backend.entities.users.Role;
@@ -23,6 +32,8 @@ import com.tourhive.backend.exceptions.TourAccessDeniedException;
 import com.tourhive.backend.exceptions.TourNotFoundException;
 import com.tourhive.backend.mappers.tours.TourMapper;
 import com.tourhive.backend.repositories.resources.ResourceRepository;
+import com.tourhive.backend.repositories.tours.ApplicationStatusHistoryRepository;
+import com.tourhive.backend.repositories.tours.TourApplicationRepository;
 import com.tourhive.backend.repositories.tours.TourImageRepository;
 import com.tourhive.backend.repositories.tours.TourRepository;
 import com.tourhive.backend.repositories.tours.TourRouteItemRepository;
@@ -50,6 +61,10 @@ public class TourServiceImpl implements TourService {
     private final UserProfileRepository userProfileRepository;
     private final ResourceRepository resourceRepository;
     private final TourMapper tourMapper;
+    private final TourApplicationRepository tourApplicationRepository;
+    private final ApplicationStatusHistoryRepository applicationStatusHistoryRepository;
+    private final com.tourhive.backend.services.chats.ChatService chatService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public TourServiceImpl(
             TourRepository tourRepository,
@@ -58,7 +73,11 @@ public class TourServiceImpl implements TourService {
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
             ResourceRepository resourceRepository,
-            TourMapper tourMapper
+            TourMapper tourMapper,
+            TourApplicationRepository tourApplicationRepository,
+            ApplicationStatusHistoryRepository applicationStatusHistoryRepository,
+            com.tourhive.backend.services.chats.ChatService chatService,
+            org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
         this.tourRepository = tourRepository;
         this.tourRouteItemRepository = tourRouteItemRepository;
@@ -67,6 +86,10 @@ public class TourServiceImpl implements TourService {
         this.userProfileRepository = userProfileRepository;
         this.resourceRepository = resourceRepository;
         this.tourMapper = tourMapper;
+        this.tourApplicationRepository = tourApplicationRepository;
+        this.applicationStatusHistoryRepository = applicationStatusHistoryRepository;
+        this.chatService = chatService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -205,16 +228,16 @@ public class TourServiceImpl implements TourService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new TourNotFoundException("Tour not found: " + tourId));
 
-        if (tour.getStatus() == TourStatus.DRAFT || tour.getStatus() == TourStatus.REJECTED) {
+        if (tour.getStatus() != TourStatus.PUBLISHED && tour.getStatus() != TourStatus.COMPLETED) {
             if (currentUserId == null) {
-                throw new TourAccessDeniedException("Draft tours can only be viewed by their organizer");
+                throw new TourAccessDeniedException("Non-published tours can only be viewed by their organizer");
             }
             User currentUser = userRepository.findById(currentUserId).orElse(null);
             boolean isOwner = tour.getOrganizer().getId().equals(currentUserId);
             boolean isModerator = currentUser != null && (currentUser.getRole() == Role.MODERATOR || currentUser.getRole() == Role.ADMIN);
 
             if (!isOwner && !isModerator) {
-                throw new TourAccessDeniedException("Draft tours can only be viewed by their organizer");
+                throw new TourAccessDeniedException("Non-published tours can only be viewed by their organizer");
             }
         }
 
@@ -290,6 +313,142 @@ public class TourServiceImpl implements TourService {
         tour.removeImage(image);
         tourImageRepository.delete(image);
         log.info("Removed image {} from tour {}", imageId, tourId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TourShortResponseDto> searchPublishedTours(TourSearchCriteria criteria, Pageable pageable) {
+        if (criteria != null) {
+            if (criteria.dateFrom() != null && criteria.dateTo() != null && criteria.dateFrom().isAfter(criteria.dateTo())) {
+                throw new InvalidTourDataException("dateFrom must be before or equal to dateTo");
+            }
+            if (criteria.minPrice() != null && criteria.maxPrice() != null && criteria.minPrice().compareTo(criteria.maxPrice()) > 0) {
+                throw new InvalidTourDataException("minPrice must be less than or equal to maxPrice");
+            }
+        }
+
+        var builder = new TourSpecificationBuilder();
+        if (criteria != null) {
+            builder.withSearch(criteria.search())
+                    .withCountry(criteria.country())
+                    .withCity(criteria.city())
+                    .withTourType(criteria.tourType())
+                    .withDateFrom(criteria.dateFrom())
+                    .withDateTo(criteria.dateTo())
+                    .withMinPrice(criteria.minPrice())
+                    .withMaxPrice(criteria.maxPrice())
+                    .withHasAvailablePlaces(criteria.hasAvailablePlaces());
+        }
+        var spec = builder.build();
+
+        // Mandatory visibility restriction: only PUBLISHED tours in public catalog
+        spec = spec.and(TourSpecification.hasStatus(TourStatus.PUBLISHED));
+
+        Page<Tour> page = tourRepository.findAll(spec, pageable);
+        return page.map(tour -> {
+            UserProfile profile = userProfileRepository.findByUserId(tour.getOrganizer().getId()).orElse(null);
+            return tourMapper.toShortResponseDto(tour, profile);
+        });
+    }
+
+    @Override
+    @Transactional
+    public TourResponseDto publishTour(UUID tourId, UUID organizerId) {
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new TourNotFoundException("Tour not found: " + tourId));
+
+        validateOwnership(tour, organizerId);
+
+        if (tour.getStatus() != TourStatus.DRAFT && tour.getStatus() != TourStatus.REJECTED) {
+            throw new InvalidTourDataException("Only draft or rejected tours can be submitted for publication");
+        }
+
+        if (tour.getTitle() == null || tour.getTitle().isBlank()) {
+            throw new InvalidTourDataException("Tour title is required for publication");
+        }
+        if (tour.getStartDate() == null || tour.getEndDate() == null) {
+            throw new InvalidTourDataException("Tour start and end dates are required for publication");
+        }
+        validateTourDates(tour.getStartDate(), tour.getEndDate());
+
+        if (tour.getCapacity() == null || tour.getCapacity() < 1) {
+            throw new InvalidTourDataException("Tour capacity must be at least 1");
+        }
+        if (tour.getCountries().isEmpty() && tour.getCities().isEmpty()) {
+            throw new InvalidTourDataException("At least one destination country or city is required for publication");
+        }
+        if (tour.getImages().isEmpty()) {
+            throw new InvalidTourDataException("At least one tour photo is required for publication");
+        }
+
+        if (tour.getTourType() == TourType.COMMERCIAL && !tour.getOrganizer().isBusinessVerified()) {
+            throw new CommercialTourNotAllowedException("Commercial tours require verified business status");
+        }
+
+        tour.setStatus(TourStatus.PENDING_REVIEW);
+        tour.setRejectionReason(null);
+        Tour saved = tourRepository.save(tour);
+        log.info("Tour {} submitted for moderation by organizer {}", saved.getId(), organizerId);
+
+        UserProfile profile = userProfileRepository.findByUserId(organizerId).orElse(null);
+        return tourMapper.toResponseDto(saved, profile);
+    }
+
+    @Override
+    @Transactional
+    public TourResponseDto cancelTour(UUID tourId, UUID organizerId, CancelTourRequestDto requestDto) {
+        Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new TourNotFoundException("Tour not found: " + tourId));
+
+        validateOwnership(tour, organizerId);
+
+        if (tour.getStatus() != TourStatus.PUBLISHED && tour.getStatus() != TourStatus.PENDING_REVIEW) {
+            throw new InvalidTourDataException("Only published or pending review tours can be cancelled");
+        }
+
+        tour.setStatus(TourStatus.CANCELLED);
+        tour.setCancellationReason(requestDto.reason());
+        Tour saved = tourRepository.save(tour);
+        log.info("Tour {} cancelled by organizer {} with reason: {}", saved.getId(), organizerId, requestDto.reason());
+
+        // Invariant: cascade cancellation to active applications (PENDING and ACCEPTED)
+        List<TourApplication> activeApps = tourApplicationRepository.findAllByTourIdAndStatusIn(
+                tourId,
+                List.of(TourApplicationStatus.PENDING, TourApplicationStatus.ACCEPTED)
+        );
+        for (TourApplication app : activeApps) {
+            TourApplicationStatus old = app.getStatus();
+            app.setStatus(TourApplicationStatus.CANCELLED_BY_ORGANIZER);
+            app.setCancellationReason(requestDto.reason());
+            tourApplicationRepository.save(app);
+
+            ApplicationStatusHistory history = ApplicationStatusHistory.builder()
+                    .application(app)
+                    .oldStatus(old)
+                    .newStatus(TourApplicationStatus.CANCELLED_BY_ORGANIZER)
+                    .changedBy(tour.getOrganizer())
+                    .reason("Tour was cancelled by organizer: " + requestDto.reason())
+                    .build();
+            applicationStatusHistoryRepository.save(history);
+
+            eventPublisher.publishEvent(new com.tourhive.backend.events.NotificationEvent(
+                    app.getApplicant().getId(),
+                    com.tourhive.backend.entities.notifications.NotificationType.TOUR_CANCELLED,
+                    "Tour Cancelled",
+                    "Tour '" + tour.getTitle() + "' has been cancelled by the organizer.",
+                    "TOUR",
+                    tour.getId()
+            ));
+        }
+
+        try {
+            chatService.deactivateChatForCancelledTour(tourId);
+        } catch (Exception e) {
+            log.warn("Failed to deactivate tour chat on cancel", e);
+        }
+
+        UserProfile profile = userProfileRepository.findByUserId(organizerId).orElse(null);
+        return tourMapper.toResponseDto(saved, profile);
     }
 
     private User getActiveOrganizer(UUID userId) {

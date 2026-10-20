@@ -37,6 +37,12 @@ class UserBlockServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private com.tourhive.backend.repositories.friendships.FriendshipRepository friendshipRepository;
+
+    @Mock
+    private com.tourhive.backend.repositories.friendships.FriendRequestRepository friendRequestRepository;
+
     @InjectMocks
     private UserBlockServiceImpl userBlockService;
 
@@ -77,6 +83,8 @@ class UserBlockServiceTest {
         userBlockService.blockUser(userA, userB);
 
         verify(userBlockRepository).save(any(UserBlock.class));
+        verify(friendshipRepository).deleteFriendshipBetween(any(), any());
+        verify(friendRequestRepository).cancelPendingRequestsBetween(userA, userB);
     }
 
     @Test

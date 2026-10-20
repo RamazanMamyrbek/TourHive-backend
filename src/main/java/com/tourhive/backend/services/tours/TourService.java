@@ -25,4 +25,13 @@ public interface TourService {
     TourImageResponseDto addTourImage(UUID tourId, UUID organizerId, AddTourImageRequestDto requestDto);
 
     void removeTourImage(UUID tourId, UUID imageId, UUID organizerId);
+
+    org.springframework.data.domain.Page<TourShortResponseDto> searchPublishedTours(
+            com.tourhive.backend.dto.tours.request.TourSearchCriteria criteria,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    TourResponseDto publishTour(UUID tourId, UUID organizerId);
+
+    TourResponseDto cancelTour(UUID tourId, UUID organizerId, com.tourhive.backend.dto.tours.request.CancelTourRequestDto requestDto);
 }

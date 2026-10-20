@@ -31,6 +31,8 @@ public record TourResponseDto(
         List<TourImageResponseDto> images,
         String coverImageUrl,
         String rejectionReason,
+        String cancellationReason,
+        Instant publishedAt,
         Instant createdAt,
         Instant updatedAt
 ) {

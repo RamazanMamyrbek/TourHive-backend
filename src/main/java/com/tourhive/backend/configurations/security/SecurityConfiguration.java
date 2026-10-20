@@ -36,13 +36,16 @@ public class SecurityConfiguration {
 
     private final ObjectMapper objectMapper;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
     private static final String[] PUBLIC_WHITE_LIST = {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**",
             "/actuator/health/**",
-            "/actuator/info"
+            "/actuator/info",
+            "/ws/**",
+            "/ws"
     };
 
     @Bean
@@ -59,7 +62,10 @@ public class SecurityConfiguration {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/me", "/api/v1/users/me/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/*").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/me", "/api/v1/organizers/me/**").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/*").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/*", "/api/v1/organizers/*/reviews").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/my-drafts").authenticated()
+                        .requestMatchers("/api/v1/tours/*/applications", "/api/v1/tours/*/applications/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours", "/api/v1/tours/*", "/api/v1/tours/*/reviews").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("MODERATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
@@ -67,6 +73,7 @@ public class SecurityConfiguration {
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler())
                 )
+                .addFilterBefore(rateLimitingFilter, org.springframework.security.web.authentication.logout.LogoutFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

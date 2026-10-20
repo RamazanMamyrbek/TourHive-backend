@@ -25,6 +25,8 @@ public class UserBlockServiceImpl implements UserBlockService {
     private final UserBlockRepository userBlockRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserService userService;
+    private final com.tourhive.backend.repositories.friendships.FriendshipRepository friendshipRepository;
+    private final com.tourhive.backend.repositories.friendships.FriendRequestRepository friendRequestRepository;
 
     @Override
     @Transactional
@@ -47,6 +49,13 @@ public class UserBlockServiceImpl implements UserBlockService {
                 .build();
 
         userBlockRepository.save(userBlock);
+
+        boolean blockerFirst = blockerId.toString().compareTo(targetUserId.toString()) < 0;
+        UUID u1 = blockerFirst ? blockerId : targetUserId;
+        UUID u2 = blockerFirst ? targetUserId : blockerId;
+        friendshipRepository.deleteFriendshipBetween(u1, u2);
+        friendRequestRepository.cancelPendingRequestsBetween(blockerId, targetUserId);
+
         log.info("User {} blocked user {}", blockerId, targetUserId);
     }
 
