@@ -114,7 +114,7 @@ class OrganizerControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.legalName").value("Steppe Nomads LLP"))
-                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.status").value("VERIFIED"))
                 .andExpect(jsonPath("$.data.documents", hasSize(2)));
 
         // 2. View current business profile
@@ -123,9 +123,9 @@ class OrganizerControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.legalName").value("Steppe Nomads LLP"))
                 .andExpect(jsonPath("$.data.registrationNumber").value("BIN9876543210"))
-                .andExpect(jsonPath("$.data.status").value("PENDING"));
+                .andExpect(jsonPath("$.data.status").value("VERIFIED"));
 
-        // 3. Attempt submitting duplicate while PENDING -> 409 Conflict
+        // 3. Attempt submitting duplicate while VERIFIED -> 409 Conflict
         mockMvc.perform(post("/api/v1/organizers/me/business")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -138,6 +138,6 @@ class OrganizerControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.userId").value(guideUser.getId().toString()))
                 .andExpect(jsonPath("$.data.isOrganizer").value(true))
-                .andExpect(jsonPath("$.data.isBusinessVerified").value(false));
+                .andExpect(jsonPath("$.data.isBusinessVerified").value(true));
     }
 }

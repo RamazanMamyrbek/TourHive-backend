@@ -19,6 +19,11 @@ jwt:
   access-token-expiration-seconds: 900
   refresh-token-expiration-seconds: 2592000
 
+management:
+  health:
+    mail:
+      enabled: false
+
 logging:
   level:
     root: INFO

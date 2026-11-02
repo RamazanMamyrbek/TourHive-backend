@@ -101,7 +101,13 @@ public class DatabaseCleanup {
         this.auditLogRepository = auditLogRepository;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.core.env.Environment environment;
+
     public void clean() {
+        if (environment != null && environment.acceptsProfiles(org.springframework.core.env.Profiles.of("local"))) {
+            throw new IllegalStateException("DatabaseCleanup is forbidden on local profile to prevent wiping local PostgreSQL database!");
+        }
         reportRepository.deleteAll();
         auditLogRepository.deleteAll();
         deviceTokenRepository.deleteAll();

@@ -67,6 +67,9 @@ class TourServiceTest {
     private UserProfileRepository userProfileRepository;
 
     @Mock
+    private com.tourhive.backend.repositories.organizers.OrganizerProfileRepository organizerProfileRepository;
+
+    @Mock
     private ResourceRepository resourceRepository;
 
     @Mock
@@ -163,9 +166,14 @@ class TourServiceTest {
     }
 
     @Test
-    @DisplayName("createDraft should fail when non-business-verified organizer attempts COMMERCIAL tour")
-    void shouldFailCreatingCommercialTourIfNotBusinessVerified() {
+    @DisplayName("createDraft should allow COMMERCIAL tour for any organizer")
+    void shouldAllowCommercialTourForAnyOrganizer() {
         when(userRepository.findById(organizerUser.getId())).thenReturn(Optional.of(organizerUser));
+        when(tourRepository.save(any(Tour.class))).thenAnswer(invocation -> {
+            Tour t = invocation.getArgument(0);
+            t.setId(UUID.randomUUID());
+            return t;
+        });
 
         CreateTourRequestDto request = new CreateTourRequestDto(
                 "Commercial Silk Road Tour",
@@ -182,11 +190,9 @@ class TourServiceTest {
                 null
         );
 
-        assertThatThrownBy(() -> tourService.createDraft(organizerUser.getId(), request))
-                .isInstanceOf(CommercialTourNotAllowedException.class)
-                .hasMessageContaining("Commercial tours require verified business status");
-
-        verify(tourRepository, never()).save(any());
+        TourResponseDto response = tourService.createDraft(organizerUser.getId(), request);
+        assertThat(response).isNotNull();
+        assertThat(response.tourType()).isEqualTo(TourType.COMMERCIAL);
     }
 
     @Test
@@ -222,9 +228,15 @@ class TourServiceTest {
     }
 
     @Test
-    @DisplayName("createDraft should fail if user is not an organizer")
-    void shouldFailIfNonOrganizerTriesToCreateTour() {
+    @DisplayName("createDraft should promote regular user to organizer automatically")
+    void shouldPromoteNonOrganizerWhenCreatingTour() {
         when(userRepository.findById(regularUser.getId())).thenReturn(Optional.of(regularUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tourRepository.save(any(Tour.class))).thenAnswer(inv -> {
+            Tour t = inv.getArgument(0);
+            t.setId(UUID.randomUUID());
+            return t;
+        });
 
         CreateTourRequestDto request = new CreateTourRequestDto(
                 "Trip", "Desc", TourType.COMMUNITY,
@@ -232,9 +244,9 @@ class TourServiceTest {
                 5, BigDecimal.ZERO, "KZT", null, null, null, null
         );
 
-        assertThatThrownBy(() -> tourService.createDraft(regularUser.getId(), request))
-                .isInstanceOf(InvalidTourDataException.class)
-                .hasMessageContaining("User must be an organizer");
+        TourResponseDto response = tourService.createDraft(regularUser.getId(), request);
+        assertThat(response).isNotNull();
+        assertThat(regularUser.isOrganizer()).isTrue();
     }
 
     @Test
@@ -342,8 +354,8 @@ class TourServiceTest {
         TourResponseDto response = tourService.publishTour(tour.getId(), organizerUser.getId());
 
         assertThat(response).isNotNull();
-        assertThat(response.status()).isEqualTo(TourStatus.PENDING_REVIEW);
-        assertThat(tour.getStatus()).isEqualTo(TourStatus.PENDING_REVIEW);
+        assertThat(response.status()).isEqualTo(TourStatus.PUBLISHED);
+        assertThat(tour.getStatus()).isEqualTo(TourStatus.PUBLISHED);
     }
 
     @Test
@@ -385,7 +397,7 @@ class TourServiceTest {
                 .build();
         tour.setId(UUID.randomUUID());
 
-        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.findByIdWithPessimisticLock(tour.getId())).thenReturn(Optional.of(tour));
         when(tourRepository.save(any(Tour.class))).thenAnswer(i -> i.getArgument(0));
 
         TourResponseDto response = tourService.cancelTour(
@@ -406,7 +418,7 @@ class TourServiceTest {
         com.tourhive.backend.dto.tours.request.TourSearchCriteria criteria = new com.tourhive.backend.dto.tours.request.TourSearchCriteria(
                 null, null, null, null,
                 LocalDate.now().plusDays(10), LocalDate.now().plusDays(5),
-                null, null, null
+                null, null, null, false
         );
 
         assertThatThrownBy(() -> tourService.searchPublishedTours(criteria, org.springframework.data.domain.Pageable.unpaged()))
@@ -420,11 +432,31 @@ class TourServiceTest {
         com.tourhive.backend.dto.tours.request.TourSearchCriteria criteria = new com.tourhive.backend.dto.tours.request.TourSearchCriteria(
                 null, null, null, null,
                 null, null,
-                BigDecimal.valueOf(50000), BigDecimal.valueOf(10000), null
+                BigDecimal.valueOf(50000), BigDecimal.valueOf(10000), null, false
         );
 
         assertThatThrownBy(() -> tourService.searchPublishedTours(criteria, org.springframework.data.domain.Pageable.unpaged()))
                 .isInstanceOf(InvalidTourDataException.class)
                 .hasMessageContaining("minPrice must be less than or equal to maxPrice");
+    }
+
+    @Test
+    @DisplayName("getMyTours should return all organizer tours regardless of status")
+    void shouldReturnAllOrganizerTours() {
+        UUID organizerId = UUID.randomUUID();
+        Tour draftTour = Tour.builder().title("Draft Tour").status(TourStatus.DRAFT).build();
+        draftTour.setId(UUID.randomUUID());
+        Tour publishedTour = Tour.builder().title("Published Tour").status(TourStatus.PUBLISHED).build();
+        publishedTour.setId(UUID.randomUUID());
+
+        when(tourRepository.findAllByOrganizerIdOrderByCreatedAtDesc(organizerId))
+                .thenReturn(List.of(draftTour, publishedTour));
+        when(userProfileRepository.findByUserId(organizerId)).thenReturn(Optional.empty());
+
+        List<com.tourhive.backend.dto.tours.response.TourShortResponseDto> result = tourService.getMyTours(organizerId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).title()).isEqualTo("Draft Tour");
+        assertThat(result.get(1).title()).isEqualTo("Published Tour");
     }
 }

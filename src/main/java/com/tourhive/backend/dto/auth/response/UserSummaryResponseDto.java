@@ -9,6 +9,9 @@ import java.util.UUID;
 public record UserSummaryResponseDto(
         UUID id,
         String email,
+        String name,
+        String surname,
+        String avatarUrl,
         Role role,
         UserStatus status,
         boolean isOrganizer,

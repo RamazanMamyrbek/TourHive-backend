@@ -83,10 +83,10 @@ class AdminUserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/admin/users - moderator can list users")
+    @DisplayName("GET /api/v1/admin/users - admin can list users")
     void listUsers_Success() throws Exception {
         mockMvc.perform(get("/api/v1/admin/users")
-                        .header("Authorization", "Bearer " + moderatorToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content", org.hamcrest.Matchers.hasSize(greaterThanOrEqualTo(3))));
     }
@@ -103,7 +103,7 @@ class AdminUserControllerTest {
     @DisplayName("GET /api/v1/admin/users/{userId} - view user details")
     void getUserDetail_Success() throws Exception {
         mockMvc.perform(get("/api/v1/admin/users/" + regularUser.getId())
-                        .header("Authorization", "Bearer " + moderatorToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(regularUser.getId().toString()))
                 .andExpect(jsonPath("$.data.email").value("regular@tourhive.com"))
@@ -118,7 +118,7 @@ class AdminUserControllerTest {
 
         // 1. Block user
         mockMvc.perform(post("/api/v1/admin/users/" + regularUser.getId() + "/block")
-                        .header("Authorization", "Bearer " + moderatorToken)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(blockDto)))
                 .andExpect(status().isOk())
@@ -133,7 +133,7 @@ class AdminUserControllerTest {
 
         // 3. Unblock user
         mockMvc.perform(post("/api/v1/admin/users/" + regularUser.getId() + "/unblock")
-                        .header("Authorization", "Bearer " + moderatorToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
 
@@ -146,11 +146,11 @@ class AdminUserControllerTest {
     @Test
     @DisplayName("PATCH /api/v1/admin/users/{userId}/role - ADMIN only can update role")
     void updateUserRole_Success() throws Exception {
-        UpdateUserRoleRequestDto roleDto = new UpdateUserRoleRequestDto(Role.MODERATOR);
+        UpdateUserRoleRequestDto roleDto = new UpdateUserRoleRequestDto(Role.ADMIN);
 
-        // Moderator attempt -> 403 Forbidden
+        // Regular user attempt -> 403 Forbidden
         mockMvc.perform(patch("/api/v1/admin/users/" + regularUser.getId() + "/role")
-                        .header("Authorization", "Bearer " + moderatorToken)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(roleDto)))
                 .andExpect(status().isForbidden());
@@ -161,7 +161,7 @@ class AdminUserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(roleDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.role").value("MODERATOR"));
+                .andExpect(jsonPath("$.data.role").value("ADMIN"));
     }
 
     @Test

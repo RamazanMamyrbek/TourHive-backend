@@ -8,17 +8,21 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 
 @Slf4j
 @Component
 public class JwtTokenProvider {
+
+    private final Environment environment;
 
     @Value("${jwt.secret:tourhive-super-secure-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256}")
     private String jwtSecret;
@@ -28,8 +32,23 @@ public class JwtTokenProvider {
 
     private SecretKey secretKey;
 
+    public JwtTokenProvider() {
+        this.environment = null;
+    }
+
+    public JwtTokenProvider(Environment environment) {
+        this.environment = environment;
+    }
+
     @PostConstruct
     public void init() {
+        if (environment != null && Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
+            if (jwtSecret == null || jwtSecret.isBlank() ||
+                    "tourhive-super-secure-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256".equals(jwtSecret) ||
+                    jwtSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+                throw new IllegalStateException("Production environment must configure a secure, non-default JWT_SECRET of at least 256 bits (32 bytes)");
+            }
+        }
         this.secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 

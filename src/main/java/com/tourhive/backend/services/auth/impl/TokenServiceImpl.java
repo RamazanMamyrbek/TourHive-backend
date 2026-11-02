@@ -51,10 +51,10 @@ public class TokenServiceImpl implements TokenService {
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = InvalidTokenException.class)
     public AuthResponseDto rotateRefreshToken(String rawRefreshToken) {
         String tokenHash = hashToken(rawRefreshToken);
-        RefreshToken token = refreshTokenRepository.findByTokenHash(tokenHash)
+        RefreshToken token = refreshTokenRepository.findByTokenHashWithLock(tokenHash)
                 .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));
 
         User user = token.getUser();
@@ -112,6 +112,12 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public void revokeAllUserTokens(UUID userId) {
+        refreshTokenRepository.revokeAllByUserId(userId);
+    }
+
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void revokeAllUserTokensInNewTx(UUID userId) {
         refreshTokenRepository.revokeAllByUserId(userId);
     }
 

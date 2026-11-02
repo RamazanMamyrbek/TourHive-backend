@@ -14,4 +14,6 @@ public interface TokenService {
     void revokeRefreshToken(String rawRefreshToken);
 
     void revokeAllUserTokens(UUID userId);
+
+    void revokeAllUserTokensInNewTx(UUID userId);
 }

@@ -71,4 +71,17 @@ class TourSpecificationTest {
 
         assertThat(spec).isNotNull();
     }
+
+    @Test
+    @DisplayName("CancelTourRequestDto should default reason to non-empty string when blank or null")
+    void shouldDefaultCancellationReasonWhenBlank() {
+        var dto1 = new com.tourhive.backend.dto.tours.request.CancelTourRequestDto(null);
+        assertThat(dto1.reason()).isEqualTo("Отменено организатором");
+
+        var dto2 = new com.tourhive.backend.dto.tours.request.CancelTourRequestDto("   ");
+        assertThat(dto2.reason()).isEqualTo("Отменено организатором");
+
+        var dto3 = new com.tourhive.backend.dto.tours.request.CancelTourRequestDto("Personal reason");
+        assertThat(dto3.reason()).isEqualTo("Personal reason");
+    }
 }

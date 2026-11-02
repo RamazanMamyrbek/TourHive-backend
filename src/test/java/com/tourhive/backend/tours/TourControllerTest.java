@@ -141,8 +141,8 @@ class TourControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/tours/draft should forbid COMMERCIAL draft if organizer not business verified")
-    void shouldRejectCommercialDraftForUnverifiedOrganizer() throws Exception {
+    @DisplayName("POST /api/v1/tours/draft should allow COMMERCIAL draft for any organizer")
+    void shouldAllowCommercialDraftForAnyOrganizer() throws Exception {
         CreateTourRequestDto request = new CreateTourRequestDto(
                 "Luxury Pamir Expedition",
                 "High altitude trip",
@@ -162,8 +162,8 @@ class TourControllerTest {
                         .header("Authorization", "Bearer " + organizerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("COMMERCIAL_TOUR_NOT_ALLOWED"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.tourType").value("COMMERCIAL"));
     }
 
     @Test
@@ -306,5 +306,34 @@ class TourControllerTest {
                 .andExpect(status().isOk());
 
         assertThat(tourRepository.findById(tour.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/tours/my should return all organizer tours")
+    void shouldGetMyTours() throws Exception {
+        tourRepository.save(Tour.builder()
+                .organizer(organizerUser)
+                .title("Draft Trip")
+                .tourType(TourType.COMMUNITY)
+                .status(TourStatus.DRAFT)
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(2))
+                .capacity(5)
+                .build());
+
+        tourRepository.save(Tour.builder()
+                .organizer(organizerUser)
+                .title("Published Trip")
+                .tourType(TourType.COMMUNITY)
+                .status(TourStatus.PUBLISHED)
+                .startDate(LocalDate.now().plusDays(3))
+                .endDate(LocalDate.now().plusDays(5))
+                .capacity(10)
+                .build());
+
+        mockMvc.perform(get("/api/v1/tours/my")
+                        .header("Authorization", "Bearer " + organizerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)));
     }
 }

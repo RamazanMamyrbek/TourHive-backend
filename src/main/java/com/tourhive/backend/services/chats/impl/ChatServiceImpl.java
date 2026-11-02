@@ -135,9 +135,8 @@ public class ChatServiceImpl implements ChatService {
         boolean isAcceptedParticipant = tourApplicationRepository.existsByTourIdAndApplicantIdAndStatus(
                 tourId, currentUserId, TourApplicationStatus.ACCEPTED
         );
-        boolean isStaff = currentUser.getRole() == Role.MODERATOR || currentUser.getRole() == Role.ADMIN;
 
-        if (!isOrganizer && !isAcceptedParticipant && !isStaff) {
+        if (!isOrganizer && !isAcceptedParticipant) {
             throw new ChatAccessDeniedException("Only tour organizer and accepted participants can access the tour group chat");
         }
 

@@ -63,10 +63,11 @@ public class SecurityConfiguration {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/*").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/me", "/api/v1/organizers/me/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/*", "/api/v1/organizers/*/reviews").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/my-drafts").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/my", "/api/v1/tours/my-drafts").authenticated()
                         .requestMatchers("/api/v1/tours/*/applications", "/api/v1/tours/*/applications/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours", "/api/v1/tours/*", "/api/v1/tours/*/reviews").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("MODERATOR", "ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/posts/user/*", "/api/v1/posts/feed").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

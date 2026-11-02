@@ -50,6 +50,12 @@ public record TourApplicationResponseDto(
         @Schema(description = "Last update timestamp")
         Instant updatedAt,
 
+        @Schema(description = "Agreed tour price snapshot at application time")
+        java.math.BigDecimal agreedPrice,
+
+        @Schema(description = "Agreed tour currency snapshot at application time")
+        String agreedCurrency,
+
         @Schema(description = "History of status transitions")
         List<ApplicationHistoryItemResponseDto> history
 ) {

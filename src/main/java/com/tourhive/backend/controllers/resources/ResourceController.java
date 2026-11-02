@@ -41,9 +41,11 @@ public class ResourceController {
     @GetMapping("/{resourceId}")
     @Operation(summary = "Get resource file content by ID", description = "Streams the stored file directly through TourHive backend")
     public ResponseEntity<InputStreamResource> getResource(
-            @Parameter(description = "Resource ID") @PathVariable("resourceId") UUID resourceId
+            @Parameter(description = "Resource ID") @PathVariable("resourceId") UUID resourceId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.tourhive.backend.configurations.security.UserPrincipal principal
     ) {
-        FileDto fileDto = resourceService.getFileDtoById(resourceId);
+        UUID currentUserId = principal != null ? principal.getId() : null;
+        FileDto fileDto = resourceService.getFileDtoById(resourceId, currentUserId);
         String encodedFileName = URLEncoder.encode(fileDto.name(), StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodedFileName + "\"")

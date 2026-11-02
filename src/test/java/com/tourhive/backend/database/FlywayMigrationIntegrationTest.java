@@ -17,9 +17,9 @@ class FlywayMigrationIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("Flyway schema history table should contain successful V1 through V11 migrations")
+    @DisplayName("Flyway schema history table should contain successful V1 through V12 migrations")
     void flywayMigrationShouldApplySuccessfully() {
-        for (int v = 1; v <= 11; v++) {
+        for (int v = 1; v <= 12; v++) {
             Integer count = jdbcTemplate.queryForObject(
                     "SELECT count(*) FROM flyway_schema_history WHERE version = ? AND success = true",
                     Integer.class,

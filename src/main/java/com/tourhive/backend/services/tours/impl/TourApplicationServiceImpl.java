@@ -80,7 +80,7 @@ public class TourApplicationServiceImpl implements TourApplicationService {
     @Override
     @Transactional
     public TourApplicationResponseDto applyForTour(UUID tourId, UUID applicantId, ApplyTourRequestDto requestDto) {
-        Tour tour = tourRepository.findById(tourId)
+        Tour tour = tourRepository.findByIdWithPessimisticLock(tourId)
                 .orElseThrow(() -> new TourNotFoundException("Tour not found: " + tourId));
 
         if (tour.getStatus() != TourStatus.PUBLISHED) {
@@ -89,6 +89,10 @@ public class TourApplicationServiceImpl implements TourApplicationService {
 
         if (tour.getStartDate().isBefore(LocalDate.now())) {
             throw new InvalidApplicationStateException("Cannot apply for a tour that has already started or ended");
+        }
+
+        if (tour.getAvailablePlaces() <= 0) {
+            throw new TourCapacityExceededException("No available places left in this tour");
         }
 
         if (tour.getOrganizer().getId().equals(applicantId)) {
@@ -109,6 +113,8 @@ public class TourApplicationServiceImpl implements TourApplicationService {
                 .status(TourApplicationStatus.PENDING)
                 .message(requestDto != null ? requestDto.message() : null)
                 .contactInfo(requestDto != null ? requestDto.contactInfo() : null)
+                .agreedPrice(tour.getPrice())
+                .agreedCurrency(tour.getCurrency() != null ? tour.getCurrency() : "KZT")
                 .build();
 
         TourApplication saved = tourApplicationRepository.save(application);
@@ -146,6 +152,14 @@ public class TourApplicationServiceImpl implements TourApplicationService {
 
         if (!tour.getOrganizer().getId().equals(organizerId)) {
             throw new ApplicationAccessDeniedException("Only the tour organizer can review applications");
+        }
+
+        if (tour.getStatus() != TourStatus.PUBLISHED) {
+            throw new InvalidApplicationStateException("Cannot review applications for a tour that is not published");
+        }
+
+        if (tour.getStartDate().isBefore(LocalDate.now())) {
+            throw new InvalidApplicationStateException("Cannot accept applications for a tour that has already started or ended");
         }
 
         TourApplication application = tourApplicationRepository.findById(applicationId)
@@ -315,9 +329,8 @@ public class TourApplicationServiceImpl implements TourApplicationService {
 
         boolean isApplicant = application.getApplicant().getId().equals(currentUserId);
         boolean isOrganizer = application.getTour().getOrganizer().getId().equals(currentUserId);
-        boolean isModerator = currentUser.getRole() == Role.MODERATOR || currentUser.getRole() == Role.ADMIN;
 
-        if (!isApplicant && !isOrganizer && !isModerator) {
+        if (!isApplicant && !isOrganizer) {
             throw new ApplicationAccessDeniedException("You do not have permission to view this application");
         }
 
@@ -331,14 +344,10 @@ public class TourApplicationServiceImpl implements TourApplicationService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new TourNotFoundException("Tour not found: " + tourId));
 
-        User currentUser = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + currentUserId));
-
         boolean isOrganizer = tour.getOrganizer().getId().equals(currentUserId);
-        boolean isModerator = currentUser.getRole() == Role.MODERATOR || currentUser.getRole() == Role.ADMIN;
 
-        if (!isOrganizer && !isModerator) {
-            throw new ApplicationAccessDeniedException("Only tour organizer or moderator can view tour applications");
+        if (!isOrganizer) {
+            throw new ApplicationAccessDeniedException("Only the tour organizer can view tour applications");
         }
 
         Page<TourApplication> page;

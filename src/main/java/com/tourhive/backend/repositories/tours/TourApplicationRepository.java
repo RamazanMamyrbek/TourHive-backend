@@ -44,5 +44,7 @@ public interface TourApplicationRepository extends JpaRepository<TourApplication
 
     long countByApplicantId(UUID applicantId);
 
+    int countByTourIdAndStatus(UUID tourId, TourApplicationStatus status);
+
     List<TourApplication> findAllByApplicantIdAndStatusIn(UUID applicantId, Collection<TourApplicationStatus> statuses);
 }

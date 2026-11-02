@@ -14,6 +14,8 @@ public interface UserService {
 
     User createPendingUser(String email, String rawPassword);
 
+    User createPendingUser(String email, String rawPassword, String name, String surname);
+
     User activateUser(User user);
 
     void updatePassword(User user, String newRawPassword);

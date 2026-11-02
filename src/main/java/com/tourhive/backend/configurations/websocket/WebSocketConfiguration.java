@@ -21,6 +21,12 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+import com.tourhive.backend.entities.users.User;
+import com.tourhive.backend.repositories.chats.ChatMemberRepository;
+import com.tourhive.backend.repositories.users.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
+
+import java.security.Principal;
 import java.util.UUID;
 
 @Slf4j
@@ -30,6 +36,8 @@ import java.util.UUID;
 public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer {
 
     private final JwtTokenProvider tokenProvider;
+    private final UserRepository userRepository;
+    private final ChatMemberRepository chatMemberRepository;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
@@ -53,30 +61,68 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer 
             @Override
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
                 StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-                if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-                    String authHeader = accessor.getFirstNativeHeader("Authorization");
-                    if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
-                        String token = authHeader.substring(7);
-                        if (tokenProvider.validateToken(token)) {
-                            UUID userId = tokenProvider.getUserIdFromToken(token);
-                            String email = tokenProvider.getEmailFromToken(token);
-                            String roleStr = tokenProvider.getRoleFromToken(token);
-                            Role role = Role.valueOf(roleStr);
+                if (accessor == null) {
+                    return message;
+                }
 
-                            UserPrincipal userPrincipal = new UserPrincipal(
-                                    userId,
-                                    email,
-                                    "",
-                                    role,
-                                    UserStatus.ACTIVE
-                            );
-                            UsernamePasswordAuthenticationToken auth =
-                                    new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
-                            accessor.setUser(auth);
-                            log.debug("STOMP connect authenticated user: {}", userId);
-                        } else {
-                            log.warn("STOMP connect rejected: invalid JWT token");
+                StompCommand command = accessor.getCommand();
+                if (StompCommand.CONNECT.equals(command)) {
+                    String authHeader = accessor.getFirstNativeHeader("Authorization");
+                    if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+                        log.warn("STOMP connect rejected: missing or invalid Authorization header");
+                        throw new AccessDeniedException("Missing or invalid Authorization header");
+                    }
+                    String token = authHeader.substring(7);
+                    if (!tokenProvider.validateToken(token)) {
+                        log.warn("STOMP connect rejected: invalid JWT token");
+                        throw new AccessDeniedException("Invalid JWT token");
+                    }
+                    UUID userId = tokenProvider.getUserIdFromToken(token);
+                    User user = userRepository.findById(userId).orElse(null);
+                    if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+                        log.warn("STOMP connect rejected: user {} not found or not active", userId);
+                        throw new AccessDeniedException("User not active or does not exist");
+                    }
+
+                    UserPrincipal userPrincipal = new UserPrincipal(
+                            user.getId(),
+                            user.getEmail(),
+                            "",
+                            user.getRole(),
+                            user.getStatus()
+                    );
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
+                    accessor.setUser(auth);
+                    log.debug("STOMP connect authenticated user: {}", userId);
+                } else if (StompCommand.SUBSCRIBE.equals(command)) {
+                    Principal principal = accessor.getUser();
+                    if (principal == null) {
+                        log.warn("STOMP subscribe rejected: unauthenticated session");
+                        throw new AccessDeniedException("Unauthenticated STOMP subscription");
+                    }
+                    String destination = accessor.getDestination();
+                    if (destination != null) {
+                        if (destination.startsWith("/topic/chats/")) {
+                            String chatIdStr = destination.substring("/topic/chats/".length());
+                            try {
+                                UUID chatId = UUID.fromString(chatIdStr);
+                                UUID userId = ((UserPrincipal) ((UsernamePasswordAuthenticationToken) principal).getPrincipal()).getId();
+                                if (!chatMemberRepository.existsByChatIdAndUserIdAndIsActiveTrue(chatId, userId)) {
+                                    log.warn("STOMP subscribe rejected: user {} is not an active participant of chat {}", userId, chatId);
+                                    throw new AccessDeniedException("User is not a participant of chat " + chatId);
+                                }
+                            } catch (IllegalArgumentException e) {
+                                log.warn("STOMP subscribe rejected: malformed chat ID {}", chatIdStr);
+                                throw new AccessDeniedException("Invalid chat destination ID");
+                            }
                         }
+                    }
+                } else if (StompCommand.SEND.equals(command)) {
+                    String destination = accessor.getDestination();
+                    if (destination != null && (destination.startsWith("/topic/") || destination.startsWith("/queue/"))) {
+                        log.warn("STOMP direct SEND rejected to broker destination: {}", destination);
+                        throw new AccessDeniedException("Direct sending to broker destinations is not allowed");
                     }
                 }
                 return message;

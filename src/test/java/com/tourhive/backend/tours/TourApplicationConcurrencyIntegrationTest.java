@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("test")
 class TourApplicationConcurrencyIntegrationTest {
 
     @Autowired

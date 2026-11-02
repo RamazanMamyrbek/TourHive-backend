@@ -24,11 +24,19 @@ public final class TourSpecification {
                 .replace("_", "\\_")
                 .toLowerCase(Locale.ROOT);
         String like = "%" + sanitized + "%";
-        return (root, query, cb) ->
-                cb.or(
-                        cb.like(cb.lower(root.get("title")), like, '\\'),
-                        cb.like(cb.lower(cb.coalesce(root.get("description"), "")), like, '\\')
-                );
+        return (root, query, cb) -> {
+            if (query != null) {
+                query.distinct(true);
+            }
+            Join<Tour, String> countriesJoin = root.join("countries", jakarta.persistence.criteria.JoinType.LEFT);
+            Join<Tour, String> citiesJoin = root.join("cities", jakarta.persistence.criteria.JoinType.LEFT);
+            return cb.or(
+                    cb.like(cb.lower(root.get("title")), like, '\\'),
+                    cb.like(cb.lower(cb.coalesce(root.get("description"), "")), like, '\\'),
+                    cb.like(cb.lower(countriesJoin), like, '\\'),
+                    cb.like(cb.lower(citiesJoin), like, '\\')
+            );
+        };
     }
 
     public static Specification<Tour> hasCountry(String country) {

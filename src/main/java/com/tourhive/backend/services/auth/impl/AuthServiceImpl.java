@@ -19,9 +19,11 @@ import com.tourhive.backend.exceptions.AccountNotVerifiedException;
 import com.tourhive.backend.exceptions.InvalidCredentialsException;
 import com.tourhive.backend.exceptions.InvalidTokenException;
 import com.tourhive.backend.exceptions.InvalidVerificationCodeException;
+import com.tourhive.backend.entities.users.UserProfile;
 import com.tourhive.backend.mappers.users.UserMapper;
 import com.tourhive.backend.repositories.auth.EmailVerificationRepository;
 import com.tourhive.backend.repositories.auth.PasswordResetTokenRepository;
+import com.tourhive.backend.repositories.users.UserProfileRepository;
 import com.tourhive.backend.services.auth.AuthService;
 import com.tourhive.backend.services.auth.TokenService;
 import com.tourhive.backend.services.email.EmailService;
@@ -49,14 +51,20 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final EmailVerificationRepository emailVerificationRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final UserProfileRepository userProfileRepository;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    private UserSummaryResponseDto buildUserSummary(User user) {
+        UserProfile profile = userProfileRepository.findByUserId(user.getId()).orElse(null);
+        return userMapper.toSummaryDto(user, profile);
+    }
 
     @Override
     @Transactional
     public void register(RegisterRequestDto request) {
         log.info("Processing registration for email: {}", request.email());
-        User user = userService.createPendingUser(request.email(), request.password());
+        User user = userService.createPendingUser(request.email(), request.password(), request.name(), request.surname());
 
         String verificationCode = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
         EmailVerification verification = EmailVerification.builder()
@@ -90,11 +98,13 @@ public class AuthServiceImpl implements AuthService {
 
         String accessToken = jwtTokenProvider.generateAccessToken(activatedUser);
         String refreshToken = tokenService.issueRefreshToken(activatedUser);
+        UserSummaryResponseDto summary = buildUserSummary(activatedUser);
 
         return AuthResponseDto.of(
                 accessToken,
                 refreshToken,
-                jwtTokenProvider.getAccessTokenExpirationSeconds()
+                jwtTokenProvider.getAccessTokenExpirationSeconds(),
+                summary
         );
     }
 
@@ -127,18 +137,29 @@ public class AuthServiceImpl implements AuthService {
 
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = tokenService.issueRefreshToken(user);
+        UserSummaryResponseDto summary = buildUserSummary(user);
 
         return AuthResponseDto.of(
                 accessToken,
                 refreshToken,
-                jwtTokenProvider.getAccessTokenExpirationSeconds()
+                jwtTokenProvider.getAccessTokenExpirationSeconds(),
+                summary
         );
     }
 
     @Override
     @Transactional
     public AuthResponseDto refreshToken(RefreshTokenRequestDto request) {
-        return tokenService.rotateRefreshToken(request.refreshToken());
+        AuthResponseDto rotated = tokenService.rotateRefreshToken(request.refreshToken());
+        UUID userId = jwtTokenProvider.getUserIdFromToken(rotated.accessToken());
+        User user = userService.getById(userId);
+        UserSummaryResponseDto summary = buildUserSummary(user);
+        return AuthResponseDto.of(
+                rotated.accessToken(),
+                rotated.refreshToken(),
+                rotated.expiresIn(),
+                summary
+        );
     }
 
     @Override
@@ -153,7 +174,7 @@ public class AuthServiceImpl implements AuthService {
         log.info("Processing forgot password for email: {}", request.email());
         try {
             User user = userService.getByEmail(request.email());
-            String resetToken = UUID.randomUUID().toString();
+            String resetToken = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
 
             PasswordResetToken passwordResetToken = PasswordResetToken.builder()
                     .user(user)
@@ -171,10 +192,27 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequestDto request) {
-        log.info("Processing reset password with token");
-        PasswordResetToken resetToken = passwordResetTokenRepository
-                .findByTokenAndUsedAtIsNull(request.token())
-                .orElseThrow(() -> new InvalidTokenException("Invalid or expired password reset token"));
+        log.info("Processing reset password");
+        String lookupToken = (request.token() != null && !request.token().isBlank())
+                ? request.token().trim()
+                : (request.code() != null ? request.code().trim() : null);
+
+        if (lookupToken == null) {
+            throw new InvalidTokenException("Reset token or code is required");
+        }
+
+        PasswordResetToken resetToken;
+        if (request.email() != null && !request.email().isBlank()) {
+            User user = userService.getByEmail(request.email().trim());
+            resetToken = passwordResetTokenRepository
+                    .findTopByUserIdAndTokenAndUsedAtIsNullOrderByCreatedAtDesc(user.getId(), lookupToken)
+                    .or(() -> passwordResetTokenRepository.findByTokenAndUsedAtIsNull(lookupToken))
+                    .orElseThrow(() -> new InvalidTokenException("Invalid or expired password reset code"));
+        } else {
+            resetToken = passwordResetTokenRepository
+                    .findByTokenAndUsedAtIsNull(lookupToken)
+                    .orElseThrow(() -> new InvalidTokenException("Invalid or expired password reset token"));
+        }
 
         if (!resetToken.isValid()) {
             throw new InvalidTokenException("Password reset token has expired");
@@ -192,6 +230,6 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public UserSummaryResponseDto getCurrentUser(UserPrincipal principal) {
         User user = userService.getById(principal.getId());
-        return userMapper.toSummaryDto(user);
+        return buildUserSummary(user);
     }
 }

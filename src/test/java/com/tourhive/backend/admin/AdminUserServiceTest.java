@@ -144,11 +144,11 @@ class AdminUserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userProfileRepository.findByUserId(targetUserId)).thenReturn(Optional.of(targetProfile));
 
-        UpdateUserRoleRequestDto request = new UpdateUserRoleRequestDto(Role.MODERATOR);
+        UpdateUserRoleRequestDto request = new UpdateUserRoleRequestDto(Role.ADMIN);
         AdminUserResponseDto response = adminUserService.updateUserRole(adminId, "admin@tourhive.com", targetUserId, request, "127.0.0.1");
 
-        assertThat(response.role()).isEqualTo(Role.MODERATOR);
-        assertThat(targetUser.getRole()).isEqualTo(Role.MODERATOR);
+        assertThat(response.role()).isEqualTo(Role.ADMIN);
+        assertThat(targetUser.getRole()).isEqualTo(Role.ADMIN);
         verify(auditService).logAction(eq(adminId), eq("admin@tourhive.com"), eq(AuditAction.USER_ROLE_CHANGED), eq("USER"), eq(targetUserId), any(), any());
     }
 

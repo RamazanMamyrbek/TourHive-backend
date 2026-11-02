@@ -46,6 +46,12 @@ public class TourApplication extends BaseEntity {
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
+    @Column(name = "agreed_price", precision = 12, scale = 2)
+    private java.math.BigDecimal agreedPrice;
+
+    @Column(name = "agreed_currency", length = 3)
+    private String agreedCurrency;
+
     @Builder
     public TourApplication(
             Tour tour,
@@ -54,7 +60,9 @@ public class TourApplication extends BaseEntity {
             String message,
             String contactInfo,
             String rejectionReason,
-            String cancellationReason
+            String cancellationReason,
+            java.math.BigDecimal agreedPrice,
+            String agreedCurrency
     ) {
         this.tour = tour;
         this.applicant = applicant;
@@ -63,5 +71,7 @@ public class TourApplication extends BaseEntity {
         this.contactInfo = contactInfo;
         this.rejectionReason = rejectionReason;
         this.cancellationReason = cancellationReason;
+        this.agreedPrice = agreedPrice;
+        this.agreedCurrency = agreedCurrency;
     }
 }

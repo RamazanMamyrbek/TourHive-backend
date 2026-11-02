@@ -32,6 +32,9 @@ public record TourSearchCriteria(
         BigDecimal maxPrice,
 
         @Parameter(description = "Only return tours with available capacity (availablePlaces > 0)")
-        Boolean hasAvailablePlaces
+        Boolean hasAvailablePlaces,
+
+        @Parameter(description = "Whether to include past tours whose end date has passed")
+        Boolean includePast
 ) {
 }

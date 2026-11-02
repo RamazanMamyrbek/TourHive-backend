@@ -99,6 +99,15 @@ public class TourController {
         return ResponseEntity.ok(ApiResponseDto.success(drafts));
     }
 
+    @Operation(summary = "Get current organizer's tours", description = "Returns a list of all tours created by the current user", security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/my")
+    public ResponseEntity<ApiResponseDto<List<TourShortResponseDto>>> getMyTours(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        List<TourShortResponseDto> tours = tourService.getMyTours(principal.getId());
+        return ResponseEntity.ok(ApiResponseDto.success(tours));
+    }
+
     @Operation(summary = "Get tour details by ID", description = "Returns full details of a tour (drafts accessible only to owner/moderator)", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponseDto<TourResponseDto>> getTourById(

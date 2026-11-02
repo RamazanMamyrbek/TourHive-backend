@@ -18,6 +18,8 @@ public interface TourService {
 
     List<TourShortResponseDto> getMyDrafts(UUID organizerId);
 
+    List<TourShortResponseDto> getMyTours(UUID organizerId);
+
     TourResponseDto getTourById(UUID tourId, UUID currentUserId);
 
     void deleteTour(UUID tourId, UUID organizerId);

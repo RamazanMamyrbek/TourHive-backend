@@ -72,4 +72,6 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             @Param("userId") UUID userId,
             @Param("lastMessageCreatedAt") Instant lastMessageCreatedAt
     );
+
+    List<Message> findAllByAttachmentUrlContaining(String search);
 }

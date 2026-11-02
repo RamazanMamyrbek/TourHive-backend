@@ -122,9 +122,7 @@ public class ReviewController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID id
     ) {
-        boolean isModerator = principal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_MODERATOR") || a.getAuthority().equals("ROLE_ADMIN"));
-        reviewService.deleteReview(id, principal.getId(), isModerator);
+        reviewService.deleteReview(id, principal.getId(), false);
         return ResponseEntity.ok(ApiResponseDto.success("Review deleted successfully", null));
     }
 }

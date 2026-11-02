@@ -28,4 +28,8 @@ public interface TourRepository extends JpaRepository<Tour, UUID>, JpaSpecificat
     long countByOrganizerId(UUID organizerId);
 
     boolean existsByOrganizerIdAndStatusAndEndDateGreaterThanEqual(UUID organizerId, TourStatus status, java.time.LocalDate date);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Tour t SET t.status = com.tourhive.backend.entities.tours.TourStatus.COMPLETED WHERE t.status = com.tourhive.backend.entities.tours.TourStatus.PUBLISHED AND t.endDate < :today")
+    int completeExpiredPublishedTours(@Param("today") java.time.LocalDate today);
 }

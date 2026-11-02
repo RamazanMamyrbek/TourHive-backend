@@ -22,7 +22,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private final ConcurrentHashMap<String, RequestCounter> requestCounts = new ConcurrentHashMap<>();
 
     private static final int AUTH_LIMIT_PER_MINUTE = 100;
+    private static final int OTP_LIMIT_PER_MINUTE = 10;
     private static final int REPORT_LIMIT_PER_MINUTE = 50;
+    private static final int MAX_CACHE_SIZE = 5000;
 
     public RateLimitingFilter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -35,12 +37,26 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
         String method = request.getMethod();
 
-        if (uri.startsWith("/api/v1/auth/") || (uri.equals("/api/v1/reports") && "POST".equalsIgnoreCase(method))) {
+        boolean isOtpEndpoint = uri.equals("/api/v1/auth/verify-email")
+                || uri.equals("/api/v1/auth/reset-password")
+                || uri.equals("/api/v1/auth/forgot-password")
+                || uri.equals("/api/v1/auth/resend-code");
+
+        boolean isAuthEndpoint = uri.startsWith("/api/v1/auth/");
+        boolean isReportEndpoint = uri.equals("/api/v1/reports") && "POST".equalsIgnoreCase(method);
+
+        if (isAuthEndpoint || isReportEndpoint) {
             String clientIp = getClientIp(request);
-            int maxRequests = uri.startsWith("/api/v1/auth/") ? AUTH_LIMIT_PER_MINUTE : REPORT_LIMIT_PER_MINUTE;
-            String key = clientIp + ":" + (uri.startsWith("/api/v1/auth/") ? "auth" : "report");
+            int maxRequests = isOtpEndpoint ? OTP_LIMIT_PER_MINUTE : (isAuthEndpoint ? AUTH_LIMIT_PER_MINUTE : REPORT_LIMIT_PER_MINUTE);
+            String category = isOtpEndpoint ? "otp" : (isAuthEndpoint ? "auth" : "report");
+            String key = clientIp + ":" + category;
 
             long currentMinute = System.currentTimeMillis() / 60000;
+
+            if (requestCounts.size() > MAX_CACHE_SIZE) {
+                requestCounts.entrySet().removeIf(entry -> entry.getValue().minute() < currentMinute);
+            }
+
             RequestCounter counter = requestCounts.compute(key, (k, existing) -> {
                 if (existing == null || existing.minute() != currentMinute) {
                     return new RequestCounter(currentMinute, new AtomicInteger(1));
@@ -67,11 +83,41 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xf = request.getHeader("X-Forwarded-For");
-        if (xf != null && !xf.isBlank()) {
-            return xf.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+        if (isTrustedProxy(remoteAddr)) {
+            String xf = request.getHeader("X-Forwarded-For");
+            if (xf != null && !xf.isBlank()) {
+                return xf.split(",")[0].trim();
+            }
         }
-        return request.getRemoteAddr();
+        return remoteAddr != null ? remoteAddr : "unknown";
+    }
+
+    private boolean isTrustedProxy(String ip) {
+        if (ip == null) {
+            return false;
+        }
+        return "127.0.0.1".equals(ip)
+                || "0:0:0:0:0:0:0:1".equals(ip)
+                || "::1".equals(ip)
+                || ip.startsWith("10.")
+                || ip.startsWith("192.168.")
+                || isPrivate172(ip);
+    }
+
+    private boolean isPrivate172(String ip) {
+        if (!ip.startsWith("172.")) {
+            return false;
+        }
+        try {
+            String[] parts = ip.split("\\.");
+            if (parts.length >= 2) {
+                int second = Integer.parseInt(parts[1]);
+                return second >= 16 && second <= 31;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return false;
     }
 
     private record RequestCounter(long minute, AtomicInteger count) {}

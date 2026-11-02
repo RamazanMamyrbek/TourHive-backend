@@ -41,6 +41,17 @@ public class MinioServiceImpl implements MinioService {
         String safeFolder = StringUtils.hasText(folder) ? folder.trim().replaceAll("^/+|/+$", "") : "general";
         String key = safeFolder + "/" + UUID.randomUUID() + extension;
         String rawContentType = StringUtils.hasText(file.getContentType()) ? file.getContentType() : "application/octet-stream";
+        if ("application/octet-stream".equalsIgnoreCase(rawContentType)) {
+            if (extension.equals(".jpg") || extension.equals(".jpeg")) {
+                rawContentType = "image/jpeg";
+            } else if (extension.equals(".png")) {
+                rawContentType = "image/png";
+            } else if (extension.equals(".webp")) {
+                rawContentType = "image/webp";
+            } else if (extension.equals(".pdf")) {
+                rawContentType = "application/pdf";
+            }
+        }
 
         try {
             minioClient.putObject(

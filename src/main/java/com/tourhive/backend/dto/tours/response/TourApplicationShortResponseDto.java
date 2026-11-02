@@ -42,6 +42,12 @@ public record TourApplicationShortResponseDto(
         TourApplicationStatus status,
 
         @Schema(description = "Submission timestamp")
-        Instant createdAt
+        Instant createdAt,
+
+        @Schema(description = "Agreed tour price snapshot at application time")
+        java.math.BigDecimal agreedPrice,
+
+        @Schema(description = "Agreed tour currency snapshot at application time")
+        String agreedCurrency
 ) {
 }

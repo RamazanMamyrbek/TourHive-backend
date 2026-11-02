@@ -59,6 +59,7 @@ public class TourServiceImpl implements TourService {
     private final TourImageRepository tourImageRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final com.tourhive.backend.repositories.organizers.OrganizerProfileRepository organizerProfileRepository;
     private final ResourceRepository resourceRepository;
     private final TourMapper tourMapper;
     private final TourApplicationRepository tourApplicationRepository;
@@ -72,6 +73,7 @@ public class TourServiceImpl implements TourService {
             TourImageRepository tourImageRepository,
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
+            com.tourhive.backend.repositories.organizers.OrganizerProfileRepository organizerProfileRepository,
             ResourceRepository resourceRepository,
             TourMapper tourMapper,
             TourApplicationRepository tourApplicationRepository,
@@ -84,6 +86,7 @@ public class TourServiceImpl implements TourService {
         this.tourImageRepository = tourImageRepository;
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
+        this.organizerProfileRepository = organizerProfileRepository;
         this.resourceRepository = resourceRepository;
         this.tourMapper = tourMapper;
         this.tourApplicationRepository = tourApplicationRepository;
@@ -97,9 +100,7 @@ public class TourServiceImpl implements TourService {
     public TourResponseDto createDraft(UUID organizerId, CreateTourRequestDto requestDto) {
         User organizer = getActiveOrganizer(organizerId);
 
-        if (requestDto.tourType() == TourType.COMMERCIAL && !organizer.isBusinessVerified()) {
-            throw new CommercialTourNotAllowedException("Commercial tours require verified business status");
-        }
+        // Any user can create tours; if not marked organizer yet, getActiveOrganizer promotes them
 
         validateTourDates(requestDto.startDate(), requestDto.endDate());
 
@@ -147,14 +148,11 @@ public class TourServiceImpl implements TourService {
 
         validateOwnership(tour, organizerId);
 
-        if (tour.getStatus() != TourStatus.DRAFT && tour.getStatus() != TourStatus.REJECTED) {
-            throw new InvalidTourDataException("Only draft or rejected tours can be modified directly");
+        if (tour.getStatus() != TourStatus.DRAFT && tour.getStatus() != TourStatus.PUBLISHED && tour.getStatus() != TourStatus.REJECTED) {
+            throw new InvalidTourDataException("Only draft or published tours can be modified");
         }
 
         TourType targetType = requestDto.tourType() != null ? requestDto.tourType() : tour.getTourType();
-        if (targetType == TourType.COMMERCIAL && !tour.getOrganizer().isBusinessVerified()) {
-            throw new CommercialTourNotAllowedException("Commercial tours require verified business status");
-        }
         tour.setTourType(targetType);
 
         LocalDate startDate = requestDto.startDate() != null ? requestDto.startDate() : tour.getStartDate();
@@ -170,8 +168,12 @@ public class TourServiceImpl implements TourService {
             tour.setDescription(requestDto.description());
         }
         if (requestDto.capacity() != null) {
+            int acceptedCount = tourApplicationRepository.countByTourIdAndStatus(tour.getId(), TourApplicationStatus.ACCEPTED);
+            if (requestDto.capacity() < acceptedCount) {
+                throw new InvalidTourDataException("Capacity cannot be less than already accepted participants: " + acceptedCount);
+            }
             tour.setCapacity(requestDto.capacity());
-            tour.setAvailablePlaces(requestDto.capacity());
+            tour.setAvailablePlaces(requestDto.capacity() - acceptedCount);
         }
         if (requestDto.price() != null) {
             tour.setPrice(requestDto.price());
@@ -207,7 +209,7 @@ public class TourServiceImpl implements TourService {
         }
 
         Tour saved = tourRepository.save(tour);
-        log.info("Updated tour draft id: {} by organizer: {}", saved.getId(), organizerId);
+        log.info("Updated tour id: {} by organizer: {}", saved.getId(), organizerId);
         UserProfile profile = userProfileRepository.findByUserId(organizerId).orElse(null);
         return tourMapper.toResponseDto(saved, profile);
     }
@@ -224,6 +226,16 @@ public class TourServiceImpl implements TourService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<TourShortResponseDto> getMyTours(UUID organizerId) {
+        List<Tour> tours = tourRepository.findAllByOrganizerIdOrderByCreatedAtDesc(organizerId);
+        UserProfile profile = userProfileRepository.findByUserId(organizerId).orElse(null);
+        return tours.stream()
+                .map(t -> tourMapper.toShortResponseDto(t, profile))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public TourResponseDto getTourById(UUID tourId, UUID currentUserId) {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new TourNotFoundException("Tour not found: " + tourId));
@@ -232,11 +244,8 @@ public class TourServiceImpl implements TourService {
             if (currentUserId == null) {
                 throw new TourAccessDeniedException("Non-published tours can only be viewed by their organizer");
             }
-            User currentUser = userRepository.findById(currentUserId).orElse(null);
             boolean isOwner = tour.getOrganizer().getId().equals(currentUserId);
-            boolean isModerator = currentUser != null && (currentUser.getRole() == Role.MODERATOR || currentUser.getRole() == Role.ADMIN);
-
-            if (!isOwner && !isModerator) {
+            if (!isOwner) {
                 throw new TourAccessDeniedException("Non-published tours can only be viewed by their organizer");
             }
         }
@@ -271,6 +280,13 @@ public class TourServiceImpl implements TourService {
 
         Resource resource = resourceRepository.findById(requestDto.resourceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found: " + requestDto.resourceId()));
+
+        if (resource.getContentType() != com.tourhive.backend.entities.resources.ResourceType.IMAGE) {
+            throw new InvalidTourDataException("Only image resources can be attached to a tour");
+        }
+        if (!"tours".equalsIgnoreCase(resource.getFolder()) && !"general".equalsIgnoreCase(resource.getFolder())) {
+            throw new InvalidTourDataException("Resource is not a valid tour image");
+        }
 
         boolean isCover = Boolean.TRUE.equals(requestDto.isCover());
         if (isCover) {
@@ -341,8 +357,11 @@ public class TourServiceImpl implements TourService {
         }
         var spec = builder.build();
 
-        // Mandatory visibility restriction: only PUBLISHED tours in public catalog
+        // Mandatory visibility restriction: only PUBLISHED tours
         spec = spec.and(TourSpecification.hasStatus(TourStatus.PUBLISHED));
+        if (criteria == null || criteria.includePast() == null || !criteria.includePast()) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("endDate"), LocalDate.now()));
+        }
 
         Page<Tour> page = tourRepository.findAll(spec, pageable);
         return page.map(tour -> {
@@ -369,6 +388,9 @@ public class TourServiceImpl implements TourService {
         if (tour.getStartDate() == null || tour.getEndDate() == null) {
             throw new InvalidTourDataException("Tour start and end dates are required for publication");
         }
+        if (tour.getStartDate().isBefore(LocalDate.now())) {
+            throw new InvalidTourDataException("Cannot publish a tour with a start date in the past");
+        }
         validateTourDates(tour.getStartDate(), tour.getEndDate());
 
         if (tour.getCapacity() == null || tour.getCapacity() < 1) {
@@ -381,14 +403,26 @@ public class TourServiceImpl implements TourService {
             throw new InvalidTourDataException("At least one tour photo is required for publication");
         }
 
-        if (tour.getTourType() == TourType.COMMERCIAL && !tour.getOrganizer().isBusinessVerified()) {
-            throw new CommercialTourNotAllowedException("Commercial tours require verified business status");
-        }
-
-        tour.setStatus(TourStatus.PENDING_REVIEW);
+        tour.setStatus(TourStatus.PUBLISHED);
+        tour.setPublishedAt(java.time.Instant.now());
         tour.setRejectionReason(null);
         Tour saved = tourRepository.save(tour);
-        log.info("Tour {} submitted for moderation by organizer {}", saved.getId(), organizerId);
+        log.info("Tour {} published immediately by organizer {}", saved.getId(), organizerId);
+
+        try {
+            chatService.getOrCreateTourGroupChat(saved.getId(), saved.getOrganizer().getId());
+        } catch (Exception e) {
+            log.warn("Failed to create chat for tour on instant publish", e);
+        }
+
+        eventPublisher.publishEvent(new com.tourhive.backend.events.NotificationEvent(
+                tour.getOrganizer().getId(),
+                com.tourhive.backend.entities.notifications.NotificationType.TOUR_APPROVED,
+                "Tour Published",
+                "Your tour '" + tour.getTitle() + "' is published and now visible to everyone!",
+                "TOUR",
+                tour.getId()
+        ));
 
         UserProfile profile = userProfileRepository.findByUserId(organizerId).orElse(null);
         return tourMapper.toResponseDto(saved, profile);
@@ -397,17 +431,18 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional
     public TourResponseDto cancelTour(UUID tourId, UUID organizerId, CancelTourRequestDto requestDto) {
-        Tour tour = tourRepository.findById(tourId)
+        Tour tour = tourRepository.findByIdWithPessimisticLock(tourId)
                 .orElseThrow(() -> new TourNotFoundException("Tour not found: " + tourId));
 
         validateOwnership(tour, organizerId);
 
-        if (tour.getStatus() != TourStatus.PUBLISHED && tour.getStatus() != TourStatus.PENDING_REVIEW) {
-            throw new InvalidTourDataException("Only published or pending review tours can be cancelled");
+        if (tour.getStatus() != TourStatus.PUBLISHED) {
+            throw new InvalidTourDataException("Only published tours can be cancelled");
         }
 
         tour.setStatus(TourStatus.CANCELLED);
         tour.setCancellationReason(requestDto.reason());
+        tour.setAvailablePlaces(0);
         Tour saved = tourRepository.save(tour);
         log.info("Tour {} cancelled by organizer {} with reason: {}", saved.getId(), organizerId, requestDto.reason());
 
@@ -455,10 +490,24 @@ public class TourServiceImpl implements TourService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
+        User savedUser = user;
         if (!user.isOrganizer()) {
-            throw new InvalidTourDataException("User must be an organizer to create tours");
+            user.setOrganizer(true);
+            savedUser = userRepository.save(user);
         }
-        return user;
+        final User finalUser = savedUser;
+
+        organizerProfileRepository.findByUserId(userId)
+                .orElseGet(() -> organizerProfileRepository.save(
+                        com.tourhive.backend.entities.organizers.OrganizerProfile.builder()
+                                .user(finalUser)
+                                .experienceYears(0)
+                                .rating(java.math.BigDecimal.ZERO)
+                                .reviewsCount(0)
+                                .build()
+                ));
+
+        return finalUser;
     }
 
     private void validateOwnership(Tour tour, UUID organizerId) {

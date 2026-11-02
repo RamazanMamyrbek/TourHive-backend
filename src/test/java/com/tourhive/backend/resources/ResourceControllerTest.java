@@ -87,7 +87,7 @@ class ResourceControllerTest {
                 "image/jpeg"
         );
 
-        Mockito.when(resourceService.getFileDtoById(resourceId)).thenReturn(fileDto);
+        Mockito.when(resourceService.getFileDtoById(eq(resourceId), any())).thenReturn(fileDto);
 
         mockMvc.perform(get("/api/v1/resources/" + resourceId))
                 .andExpect(status().isOk())
@@ -101,7 +101,7 @@ class ResourceControllerTest {
     @DisplayName("GET /api/v1/resources/{id} should return 404 when resource is not found")
     void shouldReturn404WhenResourceNotFound() throws Exception {
         UUID resourceId = UUID.randomUUID();
-        Mockito.when(resourceService.getFileDtoById(resourceId))
+        Mockito.when(resourceService.getFileDtoById(eq(resourceId), any()))
                 .thenThrow(new ResourceNotFoundException("Resource not found by id: " + resourceId));
 
         mockMvc.perform(get("/api/v1/resources/" + resourceId))

@@ -55,6 +55,8 @@ public interface TourApplicationMapper {
                 application.getCancellationReason(),
                 application.getCreatedAt(),
                 application.getUpdatedAt(),
+                application.getAgreedPrice() != null ? application.getAgreedPrice() : (application.getTour() != null ? application.getTour().getPrice() : null),
+                application.getAgreedCurrency() != null ? application.getAgreedCurrency() : (application.getTour() != null ? application.getTour().getCurrency() : null),
                 toHistoryDtoList(history)
         );
     }
@@ -83,7 +85,9 @@ public interface TourApplicationMapper {
                 fullName,
                 avatarUrl,
                 application.getStatus(),
-                application.getCreatedAt()
+                application.getCreatedAt(),
+                application.getAgreedPrice() != null ? application.getAgreedPrice() : (tour != null ? tour.getPrice() : null),
+                application.getAgreedCurrency() != null ? application.getAgreedCurrency() : (tour != null ? tour.getCurrency() : null)
         );
     }
 

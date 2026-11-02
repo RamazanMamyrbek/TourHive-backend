@@ -10,6 +10,8 @@ public interface ResourceService {
 
     FileDto getFileDtoById(UUID resourceId);
 
+    FileDto getFileDtoById(UUID resourceId, UUID currentUserId);
+
     Resource getResourceById(UUID resourceId);
 
     Resource saveResource(MultipartFile file, String folder);

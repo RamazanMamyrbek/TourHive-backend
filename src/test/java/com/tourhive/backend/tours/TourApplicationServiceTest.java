@@ -116,7 +116,7 @@ class TourApplicationServiceTest {
     @Test
     @DisplayName("should submit application successfully")
     void shouldApplyForTourSuccessfully() {
-        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.findByIdWithPessimisticLock(tour.getId())).thenReturn(Optional.of(tour));
         when(userRepository.findById(traveler.getId())).thenReturn(Optional.of(traveler));
         when(tourApplicationRepository.existsByTourIdAndApplicantIdAndStatusIn(any(), any(), any())).thenReturn(false);
         when(tourApplicationRepository.save(any(TourApplication.class))).thenAnswer(i -> {
@@ -141,7 +141,7 @@ class TourApplicationServiceTest {
     @Test
     @DisplayName("should fail applying to own tour")
     void shouldFailApplyingToOwnTour() {
-        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.findByIdWithPessimisticLock(tour.getId())).thenReturn(Optional.of(tour));
 
         assertThatThrownBy(() -> tourApplicationService.applyForTour(
                 tour.getId(),
@@ -155,7 +155,7 @@ class TourApplicationServiceTest {
     @DisplayName("should fail applying to non-published tour")
     void shouldFailApplyingToNonPublishedTour() {
         tour.setStatus(TourStatus.DRAFT);
-        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.findByIdWithPessimisticLock(tour.getId())).thenReturn(Optional.of(tour));
 
         assertThatThrownBy(() -> tourApplicationService.applyForTour(
                 tour.getId(),
@@ -168,7 +168,7 @@ class TourApplicationServiceTest {
     @Test
     @DisplayName("should fail if active application already exists")
     void shouldFailIfDuplicateApplication() {
-        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.findByIdWithPessimisticLock(tour.getId())).thenReturn(Optional.of(tour));
         when(userRepository.findById(traveler.getId())).thenReturn(Optional.of(traveler));
         when(tourApplicationRepository.existsByTourIdAndApplicantIdAndStatusIn(any(), any(), any())).thenReturn(true);
 

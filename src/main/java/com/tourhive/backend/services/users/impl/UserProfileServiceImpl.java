@@ -57,8 +57,29 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .orElseGet(() -> UserProfile.builder().user(user).build());
 
         userProfileMapper.updateProfileFromDto(dto, profile);
+        if (dto.firstName() != null) {
+            profile.setFirstName(StringUtils.hasText(dto.firstName()) ? dto.firstName().trim() : null);
+        }
+        if (dto.lastName() != null) {
+            profile.setLastName(StringUtils.hasText(dto.lastName()) ? dto.lastName().trim() : null);
+        }
         if (dto.nickname() != null) {
             profile.setNickname(StringUtils.hasText(dto.nickname()) ? dto.nickname().trim() : null);
+        }
+        if (dto.bio() != null) {
+            profile.setBio(StringUtils.hasText(dto.bio()) ? dto.bio().trim() : null);
+        }
+        if (dto.phone() != null) {
+            profile.setPhone(StringUtils.hasText(dto.phone()) ? dto.phone().trim() : null);
+        }
+        if (dto.country() != null) {
+            profile.setCountry(StringUtils.hasText(dto.country()) ? dto.country().trim() : null);
+        }
+        if (dto.city() != null) {
+            profile.setCity(StringUtils.hasText(dto.city()) ? dto.city().trim() : null);
+        }
+        if (dto.languages() != null) {
+            profile.setLanguages(StringUtils.hasText(dto.languages()) ? dto.languages().trim() : null);
         }
 
         UserProfile saved = userProfileRepository.save(profile);

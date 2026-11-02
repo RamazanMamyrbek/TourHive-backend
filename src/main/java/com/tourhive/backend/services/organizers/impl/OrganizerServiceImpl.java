@@ -104,10 +104,10 @@ public class OrganizerServiceImpl implements OrganizerService {
         profile.setContactEmail(dto.contactEmail());
         profile.setContactPhone(dto.contactPhone());
         profile.setDescription(dto.description());
-        profile.setStatus(BusinessVerificationStatus.PENDING);
+        profile.setStatus(BusinessVerificationStatus.VERIFIED);
         profile.setRejectionReason(null);
         profile.setReviewedBy(null);
-        profile.setReviewedAt(null);
+        profile.setReviewedAt(java.time.Instant.now());
         profile.getDocuments().clear();
 
         if (dto.documents() != null) {
@@ -119,16 +119,33 @@ public class OrganizerServiceImpl implements OrganizerService {
             }
         }
 
+        user.setBusinessVerified(true);
+        userRepository.save(user);
+
         BusinessProfile saved = businessProfileRepository.save(profile);
-        log.info("Registered business profile application for user: {}", userId);
+        log.info("Registered and auto-verified business profile for user: {}", userId);
         return organizerMapper.toBusinessProfileDto(saved);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public OrganizerProfileResponseDto getMyOrganizerProfile(UUID userId) {
         OrganizerProfile profile = organizerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Organizer profile not found for user: " + userId));
+                .orElseGet(() -> {
+                    User user = userService.getById(userId);
+                    if (!user.isOrganizer()) {
+                        user.setOrganizer(true);
+                        userRepository.save(user);
+                    }
+                    return organizerProfileRepository.save(
+                            OrganizerProfile.builder()
+                                    .user(user)
+                                    .experienceYears(0)
+                                    .rating(BigDecimal.ZERO)
+                                    .reviewsCount(0)
+                                    .build()
+                    );
+                });
 
         BusinessProfile businessProfile = businessProfileRepository.findByUserId(userId).orElse(null);
         BusinessProfileResponseDto businessDto = businessProfile != null
@@ -139,7 +156,7 @@ public class OrganizerServiceImpl implements OrganizerService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public OrganizerProfileResponseDto getPublicOrganizerProfile(UUID requestingUserId, UUID targetUserId) {
         if (requestingUserId != null && userBlockRepository.isBlockedBetween(requestingUserId, targetUserId)) {
             throw new ResourceNotFoundException("Organizer not found: " + targetUserId);
@@ -151,7 +168,14 @@ public class OrganizerServiceImpl implements OrganizerService {
         }
 
         OrganizerProfile profile = organizerProfileRepository.findByUserId(targetUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Organizer profile not found: " + targetUserId));
+                .orElseGet(() -> organizerProfileRepository.save(
+                        OrganizerProfile.builder()
+                                .user(targetUser)
+                                .experienceYears(0)
+                                .rating(BigDecimal.ZERO)
+                                .reviewsCount(0)
+                                .build()
+                ));
 
         BusinessProfile businessProfile = businessProfileRepository.findByUserId(targetUserId).orElse(null);
         BusinessProfileResponseDto businessDto = (businessProfile != null && businessProfile.getStatus() == BusinessVerificationStatus.VERIFIED)

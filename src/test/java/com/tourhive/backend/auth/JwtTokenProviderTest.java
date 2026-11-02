@@ -12,6 +12,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtTokenProviderTest {
 
@@ -50,5 +51,22 @@ class JwtTokenProviderTest {
     @DisplayName("Should fail validation on invalid or tampered JWT")
     void validateTamperedToken() {
         assertThat(jwtTokenProvider.validateToken("invalid.jwt.token")).isFalse();
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalStateException in prod profile with default or short secret")
+    void failInProdWithDefaultSecret() {
+        org.springframework.mock.env.MockEnvironment env = new org.springframework.mock.env.MockEnvironment();
+        env.setActiveProfiles("prod");
+
+        JwtTokenProvider prodProvider = new JwtTokenProvider(env);
+        ReflectionTestUtils.setField(prodProvider, "jwtSecret", "tourhive-super-secure-secret-key-that-is-at-least-256-bits-long-for-hmac-sha256");
+        assertThatThrownBy(prodProvider::init)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Production environment must configure a secure, non-default JWT_SECRET");
+
+        ReflectionTestUtils.setField(prodProvider, "jwtSecret", "too-short-secret");
+        assertThatThrownBy(prodProvider::init)
+                .isInstanceOf(IllegalStateException.class);
     }
 }
