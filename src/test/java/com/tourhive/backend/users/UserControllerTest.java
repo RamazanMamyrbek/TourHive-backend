@@ -167,7 +167,7 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/users/{id} should return public profile and hide email/phone")
+    @DisplayName("GET /api/v1/users/{id} should return public profile and hide private login email")
     void shouldReturnPublicProfileWithoutPrivateData() throws Exception {
         userProfileRepository.save(UserProfile.builder()
                 .user(testUser)
@@ -187,8 +187,8 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.lastName").value("Doe"))
                 .andExpect(jsonPath("$.data.nickname").value("johndoe"))
                 .andExpect(jsonPath("$.data.city").value("Almaty"))
-                .andExpect(jsonPath("$.data.email").doesNotExist())
-                .andExpect(jsonPath("$.data.phone").doesNotExist());
+                .andExpect(jsonPath("$.data.phone").value("+77015554433"))
+                .andExpect(jsonPath("$.data.email").doesNotExist());
     }
 
     @Test

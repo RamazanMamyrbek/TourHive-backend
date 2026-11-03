@@ -53,6 +53,27 @@ public class UserProfile extends BaseEntity {
     @Column(name = "phone", length = 50)
     private String phone;
 
+    @Column(name = "telegram", length = 100)
+    private String telegram;
+
+    @Column(name = "whatsapp", length = 50)
+    private String whatsapp;
+
+    @Column(name = "instagram", length = 100)
+    private String instagram;
+
+    @Column(name = "contact_email", length = 150)
+    private String contactEmail;
+
+    @Column(name = "specialization", length = 150)
+    private String specialization;
+
+    @Column(name = "experience_years")
+    private Integer experienceYears;
+
+    @Column(name = "website")
+    private String website;
+
     public String getFullName() {
         if (firstName == null && lastName == null) {
             return null;
@@ -78,7 +99,14 @@ public class UserProfile extends BaseEntity {
             String country,
             String city,
             String languages,
-            String phone
+            String phone,
+            String telegram,
+            String whatsapp,
+            String instagram,
+            String contactEmail,
+            String specialization,
+            Integer experienceYears,
+            String website
     ) {
         this.user = user;
         this.firstName = firstName;
@@ -91,5 +119,12 @@ public class UserProfile extends BaseEntity {
         this.city = city;
         this.languages = languages;
         this.phone = phone;
+        this.telegram = telegram;
+        this.whatsapp = whatsapp;
+        this.instagram = instagram;
+        this.contactEmail = contactEmail;
+        this.specialization = specialization;
+        this.experienceYears = experienceYears;
+        this.website = website;
     }
 }

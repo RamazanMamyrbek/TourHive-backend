@@ -1,6 +1,7 @@
 package com.tourhive.backend.dto.tours.response;
 
 import com.tourhive.backend.entities.tours.TourApplicationStatus;
+import com.tourhive.backend.entities.tours.TourStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -25,6 +26,9 @@ public record TourApplicationShortResponseDto(
 
         @Schema(description = "Tour end date")
         LocalDate tourEndDate,
+
+        @Schema(description = "Target tour status")
+        TourStatus tourStatus,
 
         @Schema(description = "Applicant user ID")
         UUID applicantId,

@@ -80,6 +80,7 @@ public interface TourApplicationMapper {
                 coverUrl,
                 tour != null ? tour.getStartDate() : null,
                 tour != null ? tour.getEndDate() : null,
+                tour != null ? tour.getStatus() : null,
                 application.getApplicant() != null ? application.getApplicant().getId() : null,
                 nickname,
                 fullName,

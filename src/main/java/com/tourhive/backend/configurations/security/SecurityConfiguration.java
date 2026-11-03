@@ -60,7 +60,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/me", "/api/v1/users/me/**").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/*").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/*", "/api/v1/users/*/certificates").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/me", "/api/v1/organizers/me/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/organizers/*", "/api/v1/organizers/*/reviews").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/my", "/api/v1/tours/my-drafts").authenticated()
