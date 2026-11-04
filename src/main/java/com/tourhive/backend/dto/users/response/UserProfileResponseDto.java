@@ -25,6 +25,8 @@ public record UserProfileResponseDto(
         String website,
         boolean isOrganizer,
         boolean isBusinessVerified,
+        long followersCount,
+        long followingCount,
         Instant createdAt,
         Instant updatedAt
 ) {

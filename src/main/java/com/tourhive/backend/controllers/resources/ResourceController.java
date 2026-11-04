@@ -51,6 +51,7 @@ public class ResourceController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodedFileName + "\"")
                 .header("File-Name", encodedFileName)
                 .contentType(MediaType.parseMediaType(fileDto.contentType()))
+                .contentLength(fileDto.size())
                 .body(fileDto.file());
     }
 

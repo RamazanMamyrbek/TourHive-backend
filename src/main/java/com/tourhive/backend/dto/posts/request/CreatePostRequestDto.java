@@ -11,7 +11,12 @@ public record CreatePostRequestDto(
         String caption,
 
         @Size(max = 200, message = "Location must not exceed 200 characters")
-        String location
+        String location,
+
+        Boolean isPrivate
 ) {
+    public CreatePostRequestDto(String imageUrl, String caption, String location) {
+        this(imageUrl, caption, location, false);
+    }
 }
 

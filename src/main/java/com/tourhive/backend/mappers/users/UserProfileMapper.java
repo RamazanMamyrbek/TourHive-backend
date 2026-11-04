@@ -20,14 +20,19 @@ public interface UserProfileMapper {
     @Mapping(target = "email", source = "user.email")
     @Mapping(target = "isOrganizer", source = "user.organizer")
     @Mapping(target = "isBusinessVerified", source = "user.businessVerified")
+    @Mapping(target = "followersCount", source = "followersCount")
+    @Mapping(target = "followingCount", source = "followingCount")
     @Mapping(target = "createdAt", source = "profile.createdAt")
     @Mapping(target = "updatedAt", source = "profile.updatedAt")
-    UserProfileResponseDto toResponseDto(UserProfile profile, User user);
+    UserProfileResponseDto toResponseDto(UserProfile profile, User user, long followersCount, long followingCount);
 
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "isOrganizer", source = "user.organizer")
     @Mapping(target = "isBusinessVerified", source = "user.businessVerified")
-    PublicUserProfileResponseDto toPublicResponseDto(UserProfile profile, User user);
+    @Mapping(target = "followersCount", source = "followersCount")
+    @Mapping(target = "followingCount", source = "followingCount")
+    @Mapping(target = "isFollowing", source = "isFollowing")
+    PublicUserProfileResponseDto toPublicResponseDto(UserProfile profile, User user, long followersCount, long followingCount, boolean isFollowing);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateProfileFromDto(UpdateProfileRequestDto dto, @MappingTarget UserProfile profile);

@@ -5,6 +5,10 @@ import org.springframework.core.io.InputStreamResource;
 public record FileDto(
         InputStreamResource file,
         String name,
-        String contentType
+        String contentType,
+        long size
 ) {
+    public FileDto(InputStreamResource file, String name, String contentType) {
+        this(file, name, contentType, 0L);
+    }
 }

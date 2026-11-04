@@ -21,6 +21,9 @@ public record PublicUserProfileResponseDto(
         Integer experienceYears,
         String website,
         boolean isOrganizer,
-        boolean isBusinessVerified
+        boolean isBusinessVerified,
+        long followersCount,
+        long followingCount,
+        boolean isFollowing
 ) {
 }

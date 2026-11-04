@@ -122,10 +122,12 @@ public class ResourceServiceImpl implements ResourceService {
 
         InputStream inputStream = minioService.downloadFile(resource.getKey());
         String contentType = resource.getMimeType() != null ? resource.getMimeType() : getMimeType(resource.getContentType());
+        long size = resource.getSize() != null ? resource.getSize() : 0L;
         return new FileDto(
                 new InputStreamResource(inputStream),
                 resource.getName(),
-                contentType
+                contentType,
+                size
         );
     }
 

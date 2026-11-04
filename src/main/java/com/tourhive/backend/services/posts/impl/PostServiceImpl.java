@@ -33,6 +33,7 @@ public class PostServiceImpl implements PostService {
     private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final com.tourhive.backend.repositories.users.UserFollowRepository userFollowRepository;
 
     @Override
     @Transactional
@@ -45,6 +46,7 @@ public class PostServiceImpl implements PostService {
                 .imageUrl(request.imageUrl().trim())
                 .caption(request.caption() != null ? request.caption().trim() : null)
                 .location(request.location() != null ? request.location().trim() : null)
+                .isPrivate(Boolean.TRUE.equals(request.isPrivate()))
                 .likesCount(0)
                 .build();
 
@@ -55,13 +57,37 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Page<PostResponseDto> getUserPosts(UUID currentUserId, UUID targetUserId, Pageable pageable) {
-        return postRepository.findAllByAuthorIdOrderByCreatedAtDesc(targetUserId, pageable)
-                .map(post -> toDto(post, currentUserId));
+        boolean canSeePrivate = currentUserId != null &&
+                (currentUserId.equals(targetUserId) || userFollowRepository.existsByFollowerIdAndFollowingId(currentUserId, targetUserId));
+
+        Page<Post> postsPage = canSeePrivate
+                ? postRepository.findAllByAuthorIdOrderByCreatedAtDesc(targetUserId, pageable)
+                : postRepository.findAllByAuthorIdAndIsPrivateFalseOrderByCreatedAtDesc(targetUserId, pageable);
+
+        return postsPage.map(post -> toDto(post, currentUserId));
     }
 
     @Override
     public Page<PostResponseDto> getFeedPosts(UUID currentUserId, Pageable pageable) {
-        return postRepository.findAllByOrderByCreatedAtDesc(pageable)
+        return getFeedPosts(currentUserId, "GLOBAL", pageable);
+    }
+
+    @Override
+    public Page<PostResponseDto> getFeedPosts(UUID currentUserId, String scope, Pageable pageable) {
+        if ("FOLLOWING".equalsIgnoreCase(scope)) {
+            if (currentUserId == null) {
+                return Page.empty(pageable);
+            }
+            java.util.List<UUID> authorIds = new java.util.ArrayList<>(userFollowRepository.findFollowingIdsByFollowerId(currentUserId));
+            authorIds.add(currentUserId);
+            if (authorIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            return postRepository.findAllByAuthorIdsOrderByCreatedAtDesc(authorIds, pageable)
+                    .map(post -> toDto(post, currentUserId));
+        }
+
+        return postRepository.findAllByIsPrivateFalseOrderByCreatedAtDesc(pageable)
                 .map(post -> toDto(post, currentUserId));
     }
 
@@ -132,6 +158,7 @@ public class PostServiceImpl implements PostService {
                 post.getLocation(),
                 post.getLikesCount() != null ? post.getLikesCount() : 0,
                 isLikedByMe,
+                Boolean.TRUE.equals(post.getIsPrivate()),
                 post.getCreatedAt()
         );
     }

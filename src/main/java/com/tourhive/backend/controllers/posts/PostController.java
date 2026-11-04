@@ -61,16 +61,17 @@ public class PostController {
     }
 
     @Operation(
-            summary = "Get global posts feed",
-            description = "Returns chronological feed of published posts"
+            summary = "Get posts feed",
+            description = "Returns chronological feed of published posts (scope=GLOBAL or scope=FOLLOWING)"
     )
     @GetMapping("/feed")
     public ResponseEntity<ApiResponseDto<Page<PostResponseDto>>> getFeed(
             @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "scope", defaultValue = "GLOBAL") String scope,
             @ParameterObject Pageable pageable
     ) {
         UUID currentUserId = principal != null ? principal.getId() : null;
-        Page<PostResponseDto> page = postService.getFeedPosts(currentUserId, pageable);
+        Page<PostResponseDto> page = postService.getFeedPosts(currentUserId, scope, pageable);
         return ResponseEntity.ok(ApiResponseDto.success(page));
     }
 

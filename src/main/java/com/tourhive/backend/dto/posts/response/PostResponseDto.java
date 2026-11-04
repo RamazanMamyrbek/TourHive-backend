@@ -14,6 +14,7 @@ public record PostResponseDto(
         String location,
         int likesCount,
         boolean isLikedByMe,
+        boolean isPrivate,
         Instant createdAt
 ) {
 }

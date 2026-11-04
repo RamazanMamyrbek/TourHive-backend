@@ -28,6 +28,10 @@ public class Post extends BaseEntity {
     private String location;
 
     @Builder.Default
+    @Column(name = "is_private", nullable = false)
+    private Boolean isPrivate = false;
+
+    @Builder.Default
     @Column(name = "likes_count", nullable = false)
     private Integer likesCount = 0;
 }

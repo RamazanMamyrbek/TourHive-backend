@@ -28,9 +28,16 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
     private final UserBlockRepository userBlockRepository;
+    private final com.tourhive.backend.repositories.users.UserFollowRepository userFollowRepository;
     private final UserService userService;
     private final UserProfileMapper userProfileMapper;
     private final com.tourhive.backend.services.resources.ResourceService resourceService;
+
+    private UserProfileResponseDto buildResponseDto(UserProfile profile, User user) {
+        long followersCount = userFollowRepository.countByFollowingId(user.getId());
+        long followingCount = userFollowRepository.countByFollowerId(user.getId());
+        return userProfileMapper.toResponseDto(profile, user, followersCount, followingCount);
+    }
 
     @Override
     @Transactional
@@ -38,7 +45,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         User user = userService.getById(userId);
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseGet(() -> userProfileRepository.save(UserProfile.builder().user(user).build()));
-        return userProfileMapper.toResponseDto(profile, user);
+        return buildResponseDto(profile, user);
     }
 
     @Override
@@ -83,7 +90,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         }
 
         UserProfile saved = userProfileRepository.save(profile);
-        return userProfileMapper.toResponseDto(saved, user);
+        return buildResponseDto(saved, user);
     }
 
     @Override
@@ -100,7 +107,7 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         profile.setAvatarUrl(dto.avatarUrl());
         UserProfile saved = userProfileRepository.save(profile);
-        return userProfileMapper.toResponseDto(saved, user);
+        return buildResponseDto(saved, user);
     }
 
     @Override
@@ -120,7 +127,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         profile.setAvatarResource(newResource);
         profile.setAvatarUrl("/api/v1/resources/" + newResource.getId());
         UserProfile saved = userProfileRepository.save(profile);
-        return userProfileMapper.toResponseDto(saved, user);
+        return buildResponseDto(saved, user);
     }
 
     @Override
@@ -134,7 +141,11 @@ public class UserProfileServiceImpl implements UserProfileService {
         UserProfile profile = userProfileRepository.findByUserId(targetUserId)
                 .orElseGet(() -> UserProfile.builder().user(targetUser).build());
 
-        return userProfileMapper.toPublicResponseDto(profile, targetUser);
+        long followersCount = userFollowRepository.countByFollowingId(targetUserId);
+        long followingCount = userFollowRepository.countByFollowerId(targetUserId);
+        boolean isFollowing = requestingUserId != null && userFollowRepository.existsByFollowerIdAndFollowingId(requestingUserId, targetUserId);
+
+        return userProfileMapper.toPublicResponseDto(profile, targetUser, followersCount, followingCount, isFollowing);
     }
 
     @Override

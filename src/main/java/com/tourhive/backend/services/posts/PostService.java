@@ -15,6 +15,8 @@ public interface PostService {
 
     Page<PostResponseDto> getFeedPosts(UUID currentUserId, Pageable pageable);
 
+    Page<PostResponseDto> getFeedPosts(UUID currentUserId, String scope, Pageable pageable);
+
     PostResponseDto toggleLike(UUID currentUserId, UUID postId);
 
     void deletePost(UUID currentUserId, UUID postId);
