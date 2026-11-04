@@ -7,3 +7,4 @@ public class CannotFollowSelfException extends BaseException {
         super(message, HttpStatus.BAD_REQUEST, "CANNOT_FOLLOW_SELF");
     }
 }
+

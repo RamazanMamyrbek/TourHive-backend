@@ -82,6 +82,9 @@ class TourServiceTest {
     private com.tourhive.backend.services.chats.ChatService chatService;
 
     @Mock
+    private com.tourhive.backend.repositories.favorites.FavoriteRepository favoriteRepository;
+
+    @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Spy

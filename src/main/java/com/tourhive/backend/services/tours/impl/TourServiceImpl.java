@@ -65,6 +65,7 @@ public class TourServiceImpl implements TourService {
     private final TourApplicationRepository tourApplicationRepository;
     private final ApplicationStatusHistoryRepository applicationStatusHistoryRepository;
     private final com.tourhive.backend.services.chats.ChatService chatService;
+    private final com.tourhive.backend.repositories.favorites.FavoriteRepository favoriteRepository;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public TourServiceImpl(
@@ -79,6 +80,7 @@ public class TourServiceImpl implements TourService {
             TourApplicationRepository tourApplicationRepository,
             ApplicationStatusHistoryRepository applicationStatusHistoryRepository,
             com.tourhive.backend.services.chats.ChatService chatService,
+            com.tourhive.backend.repositories.favorites.FavoriteRepository favoriteRepository,
             org.springframework.context.ApplicationEventPublisher eventPublisher
     ) {
         this.tourRepository = tourRepository;
@@ -92,6 +94,7 @@ public class TourServiceImpl implements TourService {
         this.tourApplicationRepository = tourApplicationRepository;
         this.applicationStatusHistoryRepository = applicationStatusHistoryRepository;
         this.chatService = chatService;
+        this.favoriteRepository = favoriteRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -251,7 +254,9 @@ public class TourServiceImpl implements TourService {
         }
 
         UserProfile profile = userProfileRepository.findByUserId(tour.getOrganizer().getId()).orElse(null);
-        return tourMapper.toResponseDto(tour, profile);
+        boolean isFavorite = currentUserId != null
+                && favoriteRepository.existsByUserIdAndTourId(currentUserId, tour.getId());
+        return tourMapper.toResponseDto(tour, profile, isFavorite);
     }
 
     @Override
@@ -334,6 +339,12 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional(readOnly = true)
     public Page<TourShortResponseDto> searchPublishedTours(TourSearchCriteria criteria, Pageable pageable) {
+        return searchPublishedTours(criteria, pageable, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TourShortResponseDto> searchPublishedTours(TourSearchCriteria criteria, Pageable pageable, UUID currentUserId) {
         if (criteria != null) {
             if (criteria.dateFrom() != null && criteria.dateTo() != null && criteria.dateFrom().isAfter(criteria.dateTo())) {
                 throw new InvalidTourDataException("dateFrom must be before or equal to dateTo");
@@ -364,9 +375,18 @@ public class TourServiceImpl implements TourService {
         }
 
         Page<Tour> page = tourRepository.findAll(spec, pageable);
+
+        java.util.Set<UUID> favoriteTourIds = java.util.Collections.emptySet();
+        if (currentUserId != null && page.hasContent()) {
+            List<UUID> tourIds = page.getContent().stream().map(Tour::getId).toList();
+            favoriteTourIds = favoriteRepository.findFavoriteTourIdsByUserIdAndTourIds(currentUserId, tourIds);
+        }
+
+        final java.util.Set<UUID> finalFavorites = favoriteTourIds;
         return page.map(tour -> {
             UserProfile profile = userProfileRepository.findByUserId(tour.getOrganizer().getId()).orElse(null);
-            return tourMapper.toShortResponseDto(tour, profile);
+            boolean isFav = finalFavorites.contains(tour.getId());
+            return tourMapper.toShortResponseDto(tour, profile, isFav);
         });
     }
 

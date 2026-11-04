@@ -34,5 +34,24 @@ public class Post extends BaseEntity {
     @Builder.Default
     @Column(name = "likes_count", nullable = false)
     private Integer likesCount = 0;
+
+    @Builder.Default
+    @Column(name = "comments_count", nullable = false)
+    private Integer commentsCount = 0;
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    @Builder.Default
+    private java.util.List<PostMedia> media = new java.util.ArrayList<>();
+
+    public void addMedia(PostMedia item) {
+        media.add(item);
+        item.setPost(this);
+    }
+
+    public void removeMedia(PostMedia item) {
+        media.remove(item);
+        item.setPost(null);
+    }
 }
 

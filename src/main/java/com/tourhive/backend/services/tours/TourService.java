@@ -33,6 +33,12 @@ public interface TourService {
             org.springframework.data.domain.Pageable pageable
     );
 
+    org.springframework.data.domain.Page<TourShortResponseDto> searchPublishedTours(
+            com.tourhive.backend.dto.tours.request.TourSearchCriteria criteria,
+            org.springframework.data.domain.Pageable pageable,
+            UUID currentUserId
+    );
+
     TourResponseDto publishTour(UUID tourId, UUID organizerId);
 
     TourResponseDto cancelTour(UUID tourId, UUID organizerId, com.tourhive.backend.dto.tours.request.CancelTourRequestDto requestDto);

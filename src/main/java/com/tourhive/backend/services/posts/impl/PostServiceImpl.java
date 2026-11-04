@@ -2,8 +2,11 @@ package com.tourhive.backend.services.posts.impl;
 
 import com.tourhive.backend.dto.posts.request.CreatePostRequestDto;
 import com.tourhive.backend.dto.posts.response.PostResponseDto;
+import com.tourhive.backend.dto.posts.response.PostMediaResponseDto;
 import com.tourhive.backend.entities.posts.Post;
 import com.tourhive.backend.entities.posts.PostLike;
+import com.tourhive.backend.entities.posts.PostMedia;
+import com.tourhive.backend.entities.posts.PostMediaType;
 import com.tourhive.backend.entities.users.User;
 import com.tourhive.backend.entities.users.UserProfile;
 import com.tourhive.backend.exceptions.ResourceNotFoundException;
@@ -41,14 +44,42 @@ public class PostServiceImpl implements PostService {
         User author = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + currentUserId));
 
+        String primaryImageUrl = "";
+        if (request.imageUrl() != null && !request.imageUrl().isBlank()) {
+            primaryImageUrl = request.imageUrl().trim();
+        } else if (request.media() != null && !request.media().isEmpty() && request.media().get(0).mediaUrl() != null) {
+            primaryImageUrl = request.media().get(0).mediaUrl().trim();
+        }
+
         Post post = Post.builder()
                 .author(author)
-                .imageUrl(request.imageUrl().trim())
+                .imageUrl(primaryImageUrl)
                 .caption(request.caption() != null ? request.caption().trim() : null)
                 .location(request.location() != null ? request.location().trim() : null)
                 .isPrivate(Boolean.TRUE.equals(request.isPrivate()))
                 .likesCount(0)
+                .commentsCount(0)
                 .build();
+
+        if (request.media() != null && !request.media().isEmpty()) {
+            int order = 0;
+            for (var m : request.media()) {
+                if (m.mediaUrl() != null && !m.mediaUrl().isBlank()) {
+                    PostMediaType type = "VIDEO".equalsIgnoreCase(m.mediaType()) ? PostMediaType.VIDEO : PostMediaType.IMAGE;
+                    post.addMedia(PostMedia.builder()
+                            .mediaUrl(m.mediaUrl().trim())
+                            .mediaType(type)
+                            .sortOrder(order++)
+                            .build());
+                }
+            }
+        } else if (!primaryImageUrl.isBlank()) {
+            post.addMedia(PostMedia.builder()
+                    .mediaUrl(primaryImageUrl)
+                    .mediaType(PostMediaType.IMAGE)
+                    .sortOrder(0)
+                    .build());
+        }
 
         Post saved = postRepository.save(post);
         log.info("User {} created new post {}", currentUserId, saved.getId());
@@ -147,6 +178,19 @@ public class PostServiceImpl implements PostService {
         boolean isLikedByMe = currentUserId != null
                 && postLikeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
 
+        java.util.List<PostMediaResponseDto> mediaList = new java.util.ArrayList<>();
+        if (post.getMedia() != null && !post.getMedia().isEmpty()) {
+            for (var m : post.getMedia()) {
+                mediaList.add(new PostMediaResponseDto(
+                        m.getId(),
+                        m.getMediaUrl(),
+                        m.getMediaType() != null ? m.getMediaType().name() : "IMAGE"
+                ));
+            }
+        } else if (post.getImageUrl() != null && !post.getImageUrl().isBlank()) {
+            mediaList.add(new PostMediaResponseDto(null, post.getImageUrl(), "IMAGE"));
+        }
+
         return new PostResponseDto(
                 post.getId(),
                 author.getId(),
@@ -157,8 +201,10 @@ public class PostServiceImpl implements PostService {
                 post.getCaption(),
                 post.getLocation(),
                 post.getLikesCount() != null ? post.getLikesCount() : 0,
+                post.getCommentsCount() != null ? post.getCommentsCount() : 0,
                 isLikedByMe,
                 Boolean.TRUE.equals(post.getIsPrivate()),
+                mediaList,
                 post.getCreatedAt()
         );
     }

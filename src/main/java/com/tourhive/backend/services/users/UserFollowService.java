@@ -19,3 +19,4 @@ public interface UserFollowService {
 
     Page<UserFollowSummaryDto> getFollowing(UUID targetUserId, UUID currentUserId, Pageable pageable);
 }
+

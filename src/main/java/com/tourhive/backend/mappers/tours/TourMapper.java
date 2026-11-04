@@ -70,6 +70,10 @@ public interface TourMapper {
     }
 
     default TourResponseDto toResponseDto(Tour tour, UserProfile profile) {
+        return toResponseDto(tour, profile, false);
+    }
+
+    default TourResponseDto toResponseDto(Tour tour, UserProfile profile, boolean isFavorite) {
         if (tour == null) return null;
         return new TourResponseDto(
                 tour.getId(),
@@ -96,11 +100,16 @@ public interface TourMapper {
                 tour.getCancellationReason(),
                 tour.getPublishedAt(),
                 tour.getCreatedAt(),
-                tour.getUpdatedAt()
+                tour.getUpdatedAt(),
+                isFavorite
         );
     }
 
     default TourShortResponseDto toShortResponseDto(Tour tour, UserProfile profile) {
+        return toShortResponseDto(tour, profile, false);
+    }
+
+    default TourShortResponseDto toShortResponseDto(Tour tour, UserProfile profile, boolean isFavorite) {
         if (tour == null) return null;
         return new TourShortResponseDto(
                 tour.getId(),
@@ -121,7 +130,8 @@ public interface TourMapper {
                 copyList(tour.getCities()),
                 copyList(tour.getIncludes()),
                 toRouteItemDtoList(tour.getRouteItems()),
-                resolveCoverImageUrl(tour)
+                resolveCoverImageUrl(tour),
+                isFavorite
         );
     }
 }

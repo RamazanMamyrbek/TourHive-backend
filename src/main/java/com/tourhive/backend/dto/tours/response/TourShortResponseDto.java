@@ -28,8 +28,54 @@ public record TourShortResponseDto(
         List<String> cities,
         List<String> includes,
         List<TourRouteItemResponseDto> route,
-        String coverImageUrl
+        String coverImageUrl,
+        Boolean isFavorite
 ) {
+    public TourShortResponseDto(
+            UUID id,
+            UUID organizerId,
+            String organizerName,
+            String organizerAvatarUrl,
+            String title,
+            String description,
+            TourType tourType,
+            TourStatus status,
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer capacity,
+            Integer availablePlaces,
+            BigDecimal price,
+            String currency,
+            List<String> countries,
+            List<String> cities,
+            List<String> includes,
+            List<TourRouteItemResponseDto> route,
+            String coverImageUrl
+    ) {
+        this(
+                id,
+                organizerId,
+                organizerName,
+                organizerAvatarUrl,
+                title,
+                description,
+                tourType,
+                status,
+                startDate,
+                endDate,
+                capacity,
+                availablePlaces,
+                price,
+                currency,
+                countries,
+                cities,
+                includes,
+                route,
+                coverImageUrl,
+                false
+        );
+    }
+
     public TourShortResponseDto(
             UUID id,
             UUID organizerId,
@@ -67,7 +113,8 @@ public record TourShortResponseDto(
                 cities,
                 Collections.emptyList(),
                 Collections.emptyList(),
-                coverImageUrl
+                coverImageUrl,
+                false
         );
     }
 }

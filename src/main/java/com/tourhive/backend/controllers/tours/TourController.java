@@ -52,9 +52,11 @@ public class TourController {
     public ResponseEntity<ApiResponseDto<Page<TourShortResponseDto>>> searchTours(
             @ModelAttribute @ParameterObject TourSearchCriteria criteria,
             @ParameterObject
-            @PageableDefault(size = 20, sort = "startDate", direction = org.springframework.data.domain.Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(size = 20, sort = "startDate", direction = org.springframework.data.domain.Sort.Direction.ASC) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Page<TourShortResponseDto> tours = tourService.searchPublishedTours(criteria, pageable);
+        UUID currentUserId = principal != null ? principal.getId() : null;
+        Page<TourShortResponseDto> tours = tourService.searchPublishedTours(criteria, pageable, currentUserId);
         return ResponseEntity.ok(ApiResponseDto.success(tours));
     }
 

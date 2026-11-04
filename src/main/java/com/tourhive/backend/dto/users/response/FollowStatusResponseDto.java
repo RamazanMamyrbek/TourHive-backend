@@ -6,3 +6,4 @@ public record FollowStatusResponseDto(
         long followersCount,
         long followingCount
 ) {}
+

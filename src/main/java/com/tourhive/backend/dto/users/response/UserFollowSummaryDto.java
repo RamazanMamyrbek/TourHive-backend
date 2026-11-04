@@ -12,3 +12,4 @@ public record UserFollowSummaryDto(
         boolean isFollowing,
         Instant followedAt
 ) {}
+

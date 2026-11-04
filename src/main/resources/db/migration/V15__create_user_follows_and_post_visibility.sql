@@ -25,3 +25,4 @@ ON CONFLICT DO NOTHING;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_private BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_posts_is_private ON posts (is_private);
 CREATE INDEX IF NOT EXISTS idx_posts_author_private ON posts (author_id, is_private);
+
