@@ -18,4 +18,6 @@ public interface UserProfileService {
     UserProfileResponseDto uploadAvatar(UUID userId, org.springframework.web.multipart.MultipartFile file);
 
     PublicUserProfileResponseDto getPublicProfile(UUID requestingUserId, UUID targetUserId);
+
+    PublicUserProfileResponseDto getPublicProfile(UUID requestingUserId, String identifier);
 }

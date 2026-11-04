@@ -82,7 +82,7 @@ public class UserController {
     @Operation(summary = "Get public user profile", description = "Returns public profile data hiding sensitive private fields")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponseDto<PublicUserProfileResponseDto>> getPublicProfile(
-            @PathVariable UUID id,
+            @PathVariable String id,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID requestingUserId = principal != null ? principal.getId() : null;

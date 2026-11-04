@@ -436,8 +436,8 @@ public class TourServiceImpl implements TourService {
 
         validateOwnership(tour, organizerId);
 
-        if (tour.getStatus() != TourStatus.PUBLISHED) {
-            throw new InvalidTourDataException("Only published tours can be cancelled");
+        if (tour.getStatus() != TourStatus.PUBLISHED && tour.getStatus() != TourStatus.DRAFT) {
+            throw new InvalidTourDataException("Only published or draft tours can be cancelled");
         }
 
         tour.setStatus(TourStatus.CANCELLED);

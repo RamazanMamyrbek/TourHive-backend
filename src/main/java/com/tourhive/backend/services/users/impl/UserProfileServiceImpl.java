@@ -136,4 +136,40 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         return userProfileMapper.toPublicResponseDto(profile, targetUser);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PublicUserProfileResponseDto getPublicProfile(UUID requestingUserId, String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new ResourceNotFoundException("User not found");
+        }
+
+        if ("me".equalsIgnoreCase(identifier)) {
+            if (requestingUserId == null) {
+                throw new ResourceNotFoundException("User not found: me");
+            }
+            return getPublicProfile(requestingUserId, requestingUserId);
+        }
+
+        if (identifier.contains("@")) {
+            User user = userService.getByEmail(identifier.trim().toLowerCase());
+            return getPublicProfile(requestingUserId, user.getId());
+        }
+
+        try {
+            UUID targetUserId = UUID.fromString(identifier);
+            try {
+                return getPublicProfile(requestingUserId, targetUserId);
+            } catch (ResourceNotFoundException e) {
+                var profileOpt = userProfileRepository.findById(targetUserId);
+                if (profileOpt.isPresent()) {
+                    return getPublicProfile(requestingUserId, profileOpt.get().getUser().getId());
+                }
+                throw e;
+            }
+        } catch (IllegalArgumentException e) {
+            User user = userService.getByEmail(identifier.trim().toLowerCase());
+            return getPublicProfile(requestingUserId, user.getId());
+        }
+    }
 }

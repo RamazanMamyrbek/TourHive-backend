@@ -108,6 +108,7 @@ public interface TourMapper {
                 resolveOrganizerName(tour, profile),
                 resolveOrganizerAvatarUrl(profile),
                 tour.getTitle(),
+                tour.getDescription(),
                 tour.getTourType(),
                 tour.getStatus(),
                 tour.getStartDate(),
@@ -118,6 +119,8 @@ public interface TourMapper {
                 tour.getCurrency(),
                 copyList(tour.getCountries()),
                 copyList(tour.getCities()),
+                copyList(tour.getIncludes()),
+                toRouteItemDtoList(tour.getRouteItems()),
                 resolveCoverImageUrl(tour)
         );
     }
