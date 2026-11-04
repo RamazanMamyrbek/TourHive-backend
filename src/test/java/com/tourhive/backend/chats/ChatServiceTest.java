@@ -360,4 +360,110 @@ class ChatServiceTest {
         verify(messageReadRepository, times(1)).save(any());
         verify(chatMemberRepository).save(member);
     }
+
+    @Test
+    @DisplayName("Send voice message succeeds and assigns VOICE message type")
+    void sendVoiceMessageSucceeds() {
+        UUID chatId = UUID.randomUUID();
+        Chat chat = Chat.createDirectChat(alice, bob, alice);
+        chat.setId(chatId);
+
+        ChatMember member = ChatMember.builder().chat(chat).user(alice).isActive(true).build();
+
+        when(chatRepository.findById(chatId)).thenReturn(Optional.of(chat));
+        when(chatMemberRepository.findByChatIdAndUserId(chatId, alice.getId())).thenReturn(Optional.of(member));
+        when(userBlockRepository.isBlockedBetween(alice.getId(), bob.getId())).thenReturn(false);
+        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
+        when(userProfileRepository.findByUserId(alice.getId())).thenReturn(Optional.of(aliceProfile));
+
+        Message savedMsg = Message.builder()
+                .chat(chat)
+                .sender(alice)
+                .content(null)
+                .messageType(MessageType.VOICE)
+                .attachmentUrl("/api/v1/resources/voice-note.m4a")
+                .build();
+        savedMsg.setId(UUID.randomUUID());
+        savedMsg.setCreatedAt(Instant.now());
+
+        when(messageRepository.save(any(Message.class))).thenReturn(savedMsg);
+
+        SendMessageRequestDto request = new SendMessageRequestDto(null, MessageType.VOICE, "/api/v1/resources/voice-note.m4a");
+        ChatMessageResponseDto result = chatService.sendMessage(chatId, alice.getId(), request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.messageType()).isEqualTo(MessageType.VOICE);
+        assertThat(result.attachmentUrl()).isEqualTo("/api/v1/resources/voice-note.m4a");
+        verify(messagingTemplate).convertAndSend(eq("/topic/chats/" + chatId), any(ChatMessageResponseDto.class));
+    }
+
+    @Test
+    @DisplayName("Send video message succeeds and assigns VIDEO message type")
+    void sendVideoMessageSucceeds() {
+        UUID chatId = UUID.randomUUID();
+        Chat chat = Chat.createDirectChat(alice, bob, alice);
+        chat.setId(chatId);
+
+        ChatMember member = ChatMember.builder().chat(chat).user(alice).isActive(true).build();
+
+        when(chatRepository.findById(chatId)).thenReturn(Optional.of(chat));
+        when(chatMemberRepository.findByChatIdAndUserId(chatId, alice.getId())).thenReturn(Optional.of(member));
+        when(userBlockRepository.isBlockedBetween(alice.getId(), bob.getId())).thenReturn(false);
+        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
+        when(userProfileRepository.findByUserId(alice.getId())).thenReturn(Optional.of(aliceProfile));
+
+        Message savedMsg = Message.builder()
+                .chat(chat)
+                .sender(alice)
+                .content("Посмотрите на горы!")
+                .messageType(MessageType.VIDEO)
+                .attachmentUrl("/api/v1/resources/mountains.mp4")
+                .build();
+        savedMsg.setId(UUID.randomUUID());
+        savedMsg.setCreatedAt(Instant.now());
+
+        when(messageRepository.save(any(Message.class))).thenReturn(savedMsg);
+
+        SendMessageRequestDto request = new SendMessageRequestDto("Посмотрите на горы!", MessageType.VIDEO, "/api/v1/resources/mountains.mp4");
+        ChatMessageResponseDto result = chatService.sendMessage(chatId, alice.getId(), request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.messageType()).isEqualTo(MessageType.VIDEO);
+        assertThat(result.attachmentUrl()).isEqualTo("/api/v1/resources/mountains.mp4");
+    }
+
+    @Test
+    @DisplayName("Send document/file message succeeds and assigns FILE message type")
+    void sendFileMessageSucceeds() {
+        UUID chatId = UUID.randomUUID();
+        Chat chat = Chat.createDirectChat(alice, bob, alice);
+        chat.setId(chatId);
+
+        ChatMember member = ChatMember.builder().chat(chat).user(alice).isActive(true).build();
+
+        when(chatRepository.findById(chatId)).thenReturn(Optional.of(chat));
+        when(chatMemberRepository.findByChatIdAndUserId(chatId, alice.getId())).thenReturn(Optional.of(member));
+        when(userBlockRepository.isBlockedBetween(alice.getId(), bob.getId())).thenReturn(false);
+        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
+        when(userProfileRepository.findByUserId(alice.getId())).thenReturn(Optional.of(aliceProfile));
+
+        Message savedMsg = Message.builder()
+                .chat(chat)
+                .sender(alice)
+                .content("Страховка и билеты")
+                .messageType(MessageType.FILE)
+                .attachmentUrl("/api/v1/resources/insurance.pdf")
+                .build();
+        savedMsg.setId(UUID.randomUUID());
+        savedMsg.setCreatedAt(Instant.now());
+
+        when(messageRepository.save(any(Message.class))).thenReturn(savedMsg);
+
+        SendMessageRequestDto request = new SendMessageRequestDto("Страховка и билеты", MessageType.FILE, "/api/v1/resources/insurance.pdf");
+        ChatMessageResponseDto result = chatService.sendMessage(chatId, alice.getId(), request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.messageType()).isEqualTo(MessageType.FILE);
+        assertThat(result.attachmentUrl()).isEqualTo("/api/v1/resources/insurance.pdf");
+    }
 }

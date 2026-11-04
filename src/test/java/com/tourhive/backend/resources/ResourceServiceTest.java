@@ -138,4 +138,28 @@ class ResourceServiceTest {
                 .isInstanceOf(InvalidFileException.class)
                 .hasMessageContaining("File is empty");
     }
+
+    @Test
+    @DisplayName("checkChatAttachment should pass for audio, video, pdf, and images")
+    void shouldPassCheckChatAttachmentForAudioVideoPdfAndImages() {
+        MockMultipartFile audio = new MockMultipartFile("file", "voice.m4a", "audio/m4a", "voice data".getBytes());
+        MockMultipartFile video = new MockMultipartFile("file", "clip.mp4", "video/mp4", "video data".getBytes());
+        MockMultipartFile doc = new MockMultipartFile("file", "tickets.pdf", "application/pdf", "pdf data".getBytes());
+        MockMultipartFile img = new MockMultipartFile("file", "pic.png", "image/png", "img data".getBytes());
+
+        resourceService.checkChatAttachment(audio);
+        resourceService.checkChatAttachment(video);
+        resourceService.checkChatAttachment(doc);
+        resourceService.checkChatAttachment(img);
+    }
+
+    @Test
+    @DisplayName("checkChatAttachment should throw for disallowed file type")
+    void shouldThrowCheckChatAttachmentForDisallowedFormat() {
+        MockMultipartFile exe = new MockMultipartFile("file", "dangerous.exe", "application/x-msdownload", "exe data".getBytes());
+
+        assertThatThrownBy(() -> resourceService.checkChatAttachment(exe))
+                .isInstanceOf(InvalidFileException.class)
+                .hasMessageContaining("Invalid file type for chat");
+    }
 }

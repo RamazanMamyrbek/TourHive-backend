@@ -40,6 +40,40 @@ public class ResourceServiceImpl implements ResourceService {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
 
+    private static final Set<String> ALLOWED_CHAT_MEDIA_TYPES = Set.of(
+            // Images
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            // Audio & Voice
+            "audio/m4a",
+            "audio/mp4",
+            "audio/aac",
+            "audio/mpeg",
+            "audio/mp3",
+            "audio/wav",
+            "audio/x-wav",
+            "audio/ogg",
+            "audio/webm",
+            "audio/x-m4a",
+            // Video
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
+            "video/3gpp",
+            "video/x-matroska",
+            // Documents & files
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/zip",
+            "application/x-zip-compressed",
+            "text/plain"
+    );
+
     private final ResourceRepository resourceRepository;
     private final MinioService minioService;
     private final com.tourhive.backend.repositories.chats.MessageRepository messageRepository;
@@ -105,8 +139,10 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     @Transactional
     public Resource saveResource(MultipartFile file, String folder) {
-        if ("tours".equalsIgnoreCase(folder) || "avatars".equalsIgnoreCase(folder) || "chats".equalsIgnoreCase(folder) || "posts".equalsIgnoreCase(folder)) {
+        if ("tours".equalsIgnoreCase(folder) || "avatars".equalsIgnoreCase(folder) || "posts".equalsIgnoreCase(folder)) {
             checkImage(file);
+        } else if ("chats".equalsIgnoreCase(folder)) {
+            checkChatAttachment(file);
         } else {
             checkFile(file);
         }
@@ -174,6 +210,24 @@ public class ResourceServiceImpl implements ResourceService {
                     header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
                 return "image/webp";
             }
+            if (read >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F') {
+                return "application/pdf";
+            }
+            if (read >= 3 && header[0] == 'I' && header[1] == 'D' && header[2] == '3') {
+                return "audio/mpeg";
+            }
+            if (read >= 4 && (header[0] & 0xFF) == 0xFF && ((header[1] & 0xFF) == 0xFB || (header[1] & 0xFF) == 0xF3 || (header[1] & 0xFF) == 0xF2)) {
+                return "audio/mpeg";
+            }
+            if (read >= 4 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F') {
+                return "audio/wav";
+            }
+            if (read >= 4 && header[0] == 'O' && header[1] == 'g' && header[2] == 'g' && header[3] == 'S') {
+                return "audio/ogg";
+            }
+            if (read >= 8 && header[4] == 'f' && header[5] == 't' && header[6] == 'y' && header[7] == 'p') {
+                return "video/mp4";
+            }
         } catch (Exception ignored) {
         }
         if (filename != null) {
@@ -181,8 +235,49 @@ public class ResourceServiceImpl implements ResourceService {
             if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
             if (lower.endsWith(".png")) return "image/png";
             if (lower.endsWith(".webp")) return "image/webp";
+            if (lower.endsWith(".gif")) return "image/gif";
+            if (lower.endsWith(".m4a")) return "audio/m4a";
+            if (lower.endsWith(".mp3")) return "audio/mpeg";
+            if (lower.endsWith(".aac")) return "audio/aac";
+            if (lower.endsWith(".wav")) return "audio/wav";
+            if (lower.endsWith(".ogg")) return "audio/ogg";
+            if (lower.endsWith(".mp4")) return "video/mp4";
+            if (lower.endsWith(".mov")) return "video/quicktime";
+            if (lower.endsWith(".webm")) return "video/webm";
+            if (lower.endsWith(".3gp")) return "video/3gpp";
+            if (lower.endsWith(".pdf")) return "application/pdf";
+            if (lower.endsWith(".doc")) return "application/msword";
+            if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
+            if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            if (lower.endsWith(".zip")) return "application/zip";
+            if (lower.endsWith(".txt")) return "text/plain";
         }
         return file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+    }
+
+    @Override
+    public void checkChatAttachment(MultipartFile file) {
+        if (file == null) {
+            log.error("File is null");
+            throw new InvalidFileException("File is null");
+        }
+        if (file.isEmpty()) {
+            log.error("File is empty");
+            throw new InvalidFileException("File is empty");
+        }
+        if (file.getOriginalFilename() == null) {
+            log.error("File has no original filename");
+            throw new InvalidFileException("File has no original filename");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || "application/octet-stream".equalsIgnoreCase(contentType)) {
+            contentType = probeContentType(file.getOriginalFilename(), file);
+        }
+        if (!ALLOWED_CHAT_MEDIA_TYPES.contains(contentType.toLowerCase())) {
+            log.error("Invalid chat attachment file type: {}", contentType);
+            throw new InvalidFileException("Invalid file type for chat. Submit only allowed images, audio, video, pdf or documents");
+        }
     }
 
     @Override

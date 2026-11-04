@@ -23,4 +23,6 @@ public interface ResourceService {
     void checkImage(MultipartFile file);
 
     void checkFile(MultipartFile file);
+
+    void checkChatAttachment(MultipartFile file);
 }

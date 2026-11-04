@@ -241,9 +241,23 @@ public class ChatServiceImpl implements ChatService {
         User sender = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + currentUserId));
 
-        MessageType messageType = requestDto.messageType() != null
-                ? requestDto.messageType()
-                : (hasAttachment && !hasContent ? MessageType.IMAGE : MessageType.TEXT);
+        MessageType messageType = requestDto.messageType();
+        if (messageType == null) {
+            if (hasAttachment && !hasContent) {
+                String attach = requestDto.attachmentUrl().toLowerCase();
+                if (attach.endsWith(".m4a") || attach.endsWith(".aac") || attach.endsWith(".mp3") || attach.endsWith(".wav") || attach.endsWith(".ogg")) {
+                    messageType = MessageType.VOICE;
+                } else if (attach.endsWith(".mp4") || attach.endsWith(".mov") || attach.endsWith(".webm") || attach.endsWith(".3gp")) {
+                    messageType = MessageType.VIDEO;
+                } else if (attach.endsWith(".pdf") || attach.endsWith(".doc") || attach.endsWith(".docx") || attach.endsWith(".zip") || attach.endsWith(".txt")) {
+                    messageType = MessageType.FILE;
+                } else {
+                    messageType = MessageType.IMAGE;
+                }
+            } else {
+                messageType = MessageType.TEXT;
+            }
+        }
 
         Message message = Message.builder()
                 .chat(chat)

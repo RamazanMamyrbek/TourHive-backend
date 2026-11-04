@@ -48,8 +48,32 @@ public class MinioServiceImpl implements MinioService {
                 rawContentType = "image/png";
             } else if (extension.equals(".webp")) {
                 rawContentType = "image/webp";
+            } else if (extension.equals(".gif")) {
+                rawContentType = "image/gif";
             } else if (extension.equals(".pdf")) {
                 rawContentType = "application/pdf";
+            } else if (extension.equals(".m4a")) {
+                rawContentType = "audio/m4a";
+            } else if (extension.equals(".mp3")) {
+                rawContentType = "audio/mpeg";
+            } else if (extension.equals(".aac")) {
+                rawContentType = "audio/aac";
+            } else if (extension.equals(".wav")) {
+                rawContentType = "audio/wav";
+            } else if (extension.equals(".ogg")) {
+                rawContentType = "audio/ogg";
+            } else if (extension.equals(".mp4")) {
+                rawContentType = "video/mp4";
+            } else if (extension.equals(".mov")) {
+                rawContentType = "video/quicktime";
+            } else if (extension.equals(".webm")) {
+                rawContentType = "video/webm";
+            } else if (extension.equals(".doc")) {
+                rawContentType = "application/msword";
+            } else if (extension.equals(".docx")) {
+                rawContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            } else if (extension.equals(".zip")) {
+                rawContentType = "application/zip";
             }
         }
 

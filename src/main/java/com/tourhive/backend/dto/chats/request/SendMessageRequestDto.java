@@ -10,7 +10,7 @@ public record SendMessageRequestDto(
         @Size(max = 4000, message = "Message content must not exceed 4000 characters")
         String content,
 
-        @Schema(description = "Type of message (TEXT, IMAGE, SYSTEM)", example = "TEXT")
+        @Schema(description = "Type of message (TEXT, IMAGE, VOICE, VIDEO, FILE, SYSTEM)", example = "TEXT")
         MessageType messageType,
 
         @Schema(description = "Attachment URL (e.g. uploaded photo or resource)", example = "/api/v1/resources/11111111-2222-3333-4444-555555555555")
