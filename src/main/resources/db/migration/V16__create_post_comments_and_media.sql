@@ -32,3 +32,4 @@ SELECT gen_random_uuid(), p.id, p.image_url, 'IMAGE', 0, p.created_at
 FROM posts p
 WHERE p.image_url IS NOT NULL AND p.image_url <> ''
   AND NOT EXISTS (SELECT 1 FROM post_media pm WHERE pm.post_id = p.id);
+

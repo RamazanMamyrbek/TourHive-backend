@@ -11,5 +11,6 @@ public enum NotificationType {
     TOUR_REVIEWED,
     TOUR_APPROVED,
     TOUR_REJECTED,
+    TOUR_UPDATED,
     SYSTEM
 }

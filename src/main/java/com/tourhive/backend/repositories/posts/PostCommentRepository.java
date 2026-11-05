@@ -20,3 +20,4 @@ public interface PostCommentRepository extends JpaRepository<PostComment, UUID> 
 
     void deleteAllByPostId(UUID postId);
 }
+

@@ -15,3 +15,4 @@ public interface PostCommentService {
 
     void deleteComment(UUID currentUserId, UUID commentId);
 }
+

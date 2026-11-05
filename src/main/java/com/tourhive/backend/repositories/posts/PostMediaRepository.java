@@ -14,3 +14,4 @@ public interface PostMediaRepository extends JpaRepository<PostMedia, UUID> {
 
     void deleteAllByPostId(UUID postId);
 }
+

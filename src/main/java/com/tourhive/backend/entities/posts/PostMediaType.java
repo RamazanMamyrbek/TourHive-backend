@@ -4,3 +4,4 @@ public enum PostMediaType {
     IMAGE,
     VIDEO
 }
+

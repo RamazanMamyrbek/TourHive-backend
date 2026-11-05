@@ -9,6 +9,8 @@ import com.tourhive.backend.dto.tours.response.TourResponseDto;
 import com.tourhive.backend.entities.resources.Resource;
 import com.tourhive.backend.entities.resources.ResourceType;
 import com.tourhive.backend.entities.tours.Tour;
+import com.tourhive.backend.entities.tours.TourApplication;
+import com.tourhive.backend.entities.tours.TourApplicationStatus;
 import com.tourhive.backend.entities.tours.TourImage;
 import com.tourhive.backend.entities.tours.TourStatus;
 import com.tourhive.backend.entities.tours.TourType;
@@ -290,6 +292,54 @@ class TourServiceTest {
 
         assertThatThrownBy(() -> tourService.updateDraft(tour.getId(), regularUser.getId(), updateRequest))
                 .isInstanceOf(TourAccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("updateDraft for published tour should notify participants with accepted or pending status")
+    void shouldNotifyParticipantsWhenPublishedTourIsUpdated() {
+        Tour tour = Tour.builder()
+                .organizer(organizerUser)
+                .title("Original Published Tour")
+                .status(TourStatus.PUBLISHED)
+                .tourType(TourType.COMMUNITY)
+                .startDate(LocalDate.now().plusDays(5))
+                .endDate(LocalDate.now().plusDays(10))
+                .capacity(5)
+                .routeItems(new ArrayList<>())
+                .countries(new ArrayList<>())
+                .cities(new ArrayList<>())
+                .includes(new ArrayList<>())
+                .build();
+        tour.setId(UUID.randomUUID());
+
+        when(tourRepository.findById(tour.getId())).thenReturn(Optional.of(tour));
+        when(tourRepository.save(any(Tour.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TourApplication app = TourApplication.builder()
+                .tour(tour)
+                .applicant(regularUser)
+                .status(TourApplicationStatus.ACCEPTED)
+                .build();
+        app.setId(UUID.randomUUID());
+
+        when(tourApplicationRepository.findAllByTourIdAndStatusIn(eq(tour.getId()), anyCollection()))
+                .thenReturn(List.of(app));
+
+        UpdateTourRequestDto updateRequest = new UpdateTourRequestDto(
+                "Updated Tour Title", "Updated Description", TourType.COMMUNITY,
+                LocalDate.now().plusDays(6), LocalDate.now().plusDays(11),
+                10, null, null, List.of("Kazakhstan"), List.of("Almaty"), List.of("Hotel"), List.of()
+        );
+
+        tourService.updateDraft(tour.getId(), organizerUser.getId(), updateRequest);
+
+        org.mockito.ArgumentCaptor<Object> captor = org.mockito.ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(com.tourhive.backend.events.NotificationEvent.class);
+        com.tourhive.backend.events.NotificationEvent ne = (com.tourhive.backend.events.NotificationEvent) captor.getValue();
+        assertThat(ne.recipientUserId()).isEqualTo(regularUser.getId());
+        assertThat(ne.type()).isEqualTo(com.tourhive.backend.entities.notifications.NotificationType.TOUR_UPDATED);
+        assertThat(ne.entityId()).isEqualTo(tour.getId());
     }
 
     @Test

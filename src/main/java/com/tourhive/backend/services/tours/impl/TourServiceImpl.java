@@ -213,6 +213,24 @@ public class TourServiceImpl implements TourService {
 
         Tour saved = tourRepository.save(tour);
         log.info("Updated tour id: {} by organizer: {}", saved.getId(), organizerId);
+
+        if (saved.getStatus() == TourStatus.PUBLISHED) {
+            List<TourApplication> activeApps = tourApplicationRepository.findAllByTourIdAndStatusIn(
+                    saved.getId(),
+                    List.of(TourApplicationStatus.ACCEPTED, TourApplicationStatus.PENDING)
+            );
+            for (TourApplication app : activeApps) {
+                eventPublisher.publishEvent(new com.tourhive.backend.events.NotificationEvent(
+                        app.getApplicant().getId(),
+                        com.tourhive.backend.entities.notifications.NotificationType.TOUR_UPDATED,
+                        "Тур обновлен: " + saved.getTitle(),
+                        "Организатор обновил информацию о туре '" + saved.getTitle() + "'. Ознакомьтесь с актуальным маршрутом и деталями поездки.",
+                        "TOUR",
+                        saved.getId()
+                ));
+            }
+        }
+
         UserProfile profile = userProfileRepository.findByUserId(organizerId).orElse(null);
         return tourMapper.toResponseDto(saved, profile);
     }
